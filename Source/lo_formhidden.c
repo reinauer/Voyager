@@ -217,6 +217,7 @@ DECSMETHOD( JS_SetProperty )
 	{
 		DOM_PROP( value )
 			free( data->value );
+			data->value = NULL; /* strupd() keeps it on OOM */
 			if( msg->dataptr )
 			{
 				strupd( &data->value, msg->dataptr );

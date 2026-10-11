@@ -54,6 +54,19 @@ Changes prior to 3.0 were already dropped in that file.
 
 ### Fixed
 
+- Authentication, cookie and certificate requesters never appeared and
+  Ctrl-C/Ctrl-F were ignored: the main loop tested the MUI wait mask instead
+  of the signals `Wait()` returned. Restored the standard MUI loop.
+- Every finished page leaked in the network process: closed clients were
+  skipped as "idle cached" and never freed.
+- The cache index and saved authentications were written as garbage:
+  the `FPrintfAsync` RawDoFmt callback did not take the character in d0 and
+  the data in a3.
+- `snprintf` had RawDoFmt semantics (16 bit `%d`/`%u`, no `%f`), breaking
+  HTTPS through a proxy (`CONNECT host:0`) and the download size/speed
+  display. It is now a bounded C formatter.
+- Freed strings were kept on out of memory where `strupd()` followed a
+  `free()`; form option values set to empty went into the text field.
 - MimePrefs never imported V's prefs file: its file ID was `VY²` (a Latin-1
   byte in the source) while V writes `VY2`.
 - SMTP dot stuffing in plain text mail bodies sent a byte from address 0x2E

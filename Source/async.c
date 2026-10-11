@@ -840,28 +840,27 @@ struct fpi
 	int count;
 };
 
-/* Callback for RawDoFmt - writes one character at a time */
-/* RawDoFmt calls this with: buff = pointer to character, result = unused, userdata = fpi */
-static void dofpi_callback(STRPTR buff, LONG *result, struct fpi *fpi)
+/*
+ * RawDoFmt PutChProc: the character comes in d0 and the data pointer in
+ * a3 (exec autodoc), like the original vat dofpi and snprintf.c's sn_putc.
+ * RawDoFmt also passes the terminating NUL, which is not written.
+ */
+#ifdef __SASC
+static void __asm __saveds dofpi_callback( register __d0 UBYTE ch, register __a3 struct fpi *fpi )
+#else
+static void dofpi_callback( UBYTE ch __asm__( "d0" ), struct fpi *fpi __asm__( "a3" ) )
+#endif
 {
-	char ch;
-
-	if (!buff || !fpi)
+	if( !ch )
 		return;
 
-	ch = *buff;
-	if (!ch)
-		return;
-
-	if (fpi->error)
+	if( fpi->error )
 		return;
 
 	fpi->count++;
 
-	if (WriteCharAsync(fpi->to, (UBYTE)ch) != 1)
-	{
+	if( WriteCharAsync( fpi->to, ch ) != 1 )
 		fpi->error = 1;
-	}
 }
 
 /*****************************************************************************/

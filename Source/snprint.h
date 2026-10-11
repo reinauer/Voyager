@@ -2,7 +2,8 @@
 #define VOYAGER_SNPRINT_H
 /*
  * SNPrintf/VSNPrintf live in utility.library V47 (OS 3.2). Jumping to
- * those LVOs on older utility.library crashes. Route every SNPrintf through snprintf.c (exec RawDoFmt).
+ * those LVOs on older utility.library crashes. Route every SNPrintf through snprintf.c (C semantics,
+ * bounded, no utility.library).
  */
 #ifdef AMIGAOS
 #ifdef SNPrintf

@@ -572,6 +572,11 @@ static void doloop( void )
 			break;
 		}
 
+		/*
+		 * Standard MUI loop: NewInput returns the signals to wait for in
+		 * sig, 0 when it has more input queued. Test the signals that
+		 * actually arrived, not the wait mask.
+		 */
 		if( sig )
 		{
 #if USE_NET
@@ -579,6 +584,17 @@ static void doloop( void )
 #else
 			ULONG waitsig = sig | internalipcsig | SIGBREAKF_CTRL_C | SIGBREAKF_CTRL_F | SIGBREAKF_CTRL_E;
 #endif /* !USE_NET */
+
+			sig = Wait( waitsig );
+
+#if USE_TESTFILE
+			{
+				extern BPTR urltestfile;
+
+				if( urltestfile )
+					urltest();
+			}
+#endif
 
 			if( sig & SIGBREAKF_CTRL_C )
 				Done = TRUE;
@@ -590,20 +606,6 @@ static void doloop( void )
 			if( sig & authportsigmask )
 				auth_process();
 #endif /* USE_NET */
-		}
-
-		/* When NewInput returns 0 (no input), block to avoid infinite busy loop
-		 * (e.g. after network process crash when no events are delivered). */
-		if( id == 0 )
-		{
-			if( sig )
-				Wait( sig | SIGBREAKF_CTRL_C | SIGBREAKF_CTRL_F | SIGBREAKF_CTRL_E
-#if USE_NET
-					| internalipcsig | authportsigmask
-#endif
-				);
-			else
-				Delay( 1 );
 		}
 
 		checkmethods();

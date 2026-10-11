@@ -272,6 +272,7 @@ DECSMETHOD( JS_SetProperty )
 	{
 		DOM_PROP( target )
 			free( data->target );
+			data->target = NULL; /* strupd() keeps it on OOM */
 			if( msg->dataptr )
 			{
 				strupd( &data->target, msg->dataptr );
@@ -284,6 +285,7 @@ DECSMETHOD( JS_SetProperty )
 
 		DOM_PROP( action )
 			free( data->url );
+			data->url = NULL; /* strupd() keeps it on OOM */
 			if( msg->dataptr )
 			{
 				strupd( &data->url, msg->dataptr );

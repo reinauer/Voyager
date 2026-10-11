@@ -62,6 +62,7 @@ static int doset( struct Data *data, APTR obj, struct TagItem *tags )
 	{
 		case MA_Layout_FormOption_Text:
 			free( data->text );
+			data->text = NULL; /* strupd() keeps it on OOM */
 			if( tag->ti_Data )
 			{
 				strupd( &data->text, (char*)tag->ti_Data );
@@ -74,13 +75,14 @@ static int doset( struct Data *data, APTR obj, struct TagItem *tags )
 
 		case MA_Layout_FormOption_Value:
 			free( data->value );
+			data->value = NULL; /* strupd() keeps it on OOM */
 			if( tag->ti_Data )
 			{
 				strupd( &data->value, (char*)tag->ti_Data );
 			}
 			else
 			{
-				strupd( &data->text, "" );
+				strupd( &data->value, "" );
 			}
             break;
 
@@ -222,6 +224,7 @@ DECSMETHOD( JS_SetProperty )
 	{
 		DOM_PROP( value )
 			free( data->value );
+			data->value = NULL; /* strupd() keeps it on OOM */
 			if( msg->dataptr )
 			{
 				strupd( &data->value, msg->dataptr );
@@ -234,6 +237,7 @@ DECSMETHOD( JS_SetProperty )
 
 		DOM_PROP( text )
 			free( data->text );
+			data->text = NULL; /* strupd() keeps it on OOM */
 			if( msg->dataptr )
 			{
 				strupd( &data->text, msg->dataptr );

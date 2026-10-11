@@ -769,9 +769,17 @@ static int un_idle_cached( struct unode *un )
 		return( FALSE );
 	for( ns = FIRSTNODE( &un->clients ); NEXTNODE( ns ); ns = NEXTNODE( ns ) )
 	{
-		if( !ns->removeme && ns->informstate < 3 )
+		/*
+		 * Closed clients are only freed by processunode(), which then
+		 * deletes the unode when nothing keeps it in memory. Skipping
+		 * them here leaked every finished page.
+		 */
+		if( ns->removeme || ns->informstate < 3 )
 			return( FALSE );
 	}
+	/* processunode() would un_delete() it, see the end of the client scan */
+	if( ISLISTEMPTY( &un->clients ) && ( !un->membuff || un->errorcode || !un->keepinmem ) )
+		return( FALSE );
 	return( TRUE );
 }
 

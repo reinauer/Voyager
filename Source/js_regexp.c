@@ -352,6 +352,7 @@ DECSMETHOD( JS_CallMethod )
 					str = exprs_peek_as_string( msg->es, 0 );
 					if( data->input )
 						free( data->input );
+					data->input = NULL; /* strupd() keeps it on OOM */
 					if( str )
 					{
 						strupd( &data->input, str );

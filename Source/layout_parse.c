@@ -2123,6 +2123,11 @@ dotext:
 						free( ctx->currenttable->tr_bgimage );
 						free( ctx->currenttable->tr_valign );
 						free( ctx->currenttable->tr_align );
+						/* strupd() keeps the old pointer on OOM */
+						ctx->currenttable->tr_bgcolor = NULL;
+						ctx->currenttable->tr_bgimage = NULL;
+						ctx->currenttable->tr_valign = NULL;
+						ctx->currenttable->tr_align = NULL;
 
 						if( bgcolor )
 							strupd( &ctx->currenttable->tr_bgcolor, bgcolor );

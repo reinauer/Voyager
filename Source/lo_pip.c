@@ -95,12 +95,14 @@ static int doset( struct Data *data, APTR obj, struct TagItem *tags )
 			{
 				if( data->name )
 					free( data->name );
+				data->name = NULL; /* strupd() keeps it on OOM */
 				strupd( &data->name, (char*)tag->ti_Data );
 			}
 			break;
 
 		case MUIA_Pip_ChannelName:
 			free( data->lastchname );
+			data->lastchname = NULL; /* strupd() keeps it on OOM */
 			if( tag->ti_Data )
 				strupd( &data->lastchname, (char*)tag->ti_Data );
 			else
@@ -272,6 +274,7 @@ DOM_SETPROP
 		case JSPID_name:
 			if( data->name )
 				free( data->name );
+			data->name = NULL; /* strupd() keeps it on OOM */
 			if( msg->dataptr )
 			{
 				strupd( &data->name, (char*)msg->dataptr );

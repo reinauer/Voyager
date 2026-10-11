@@ -429,6 +429,7 @@ DECSMETHOD( JS_SetProperty )
 		case JSPID_href:
 			{
 				free( data->url );
+				data->url = NULL; /* strupd() keeps it on OOM */
 				if( msg->dataptr )
 				{
 					strupd( &data->url, (char*)msg->dataptr );
