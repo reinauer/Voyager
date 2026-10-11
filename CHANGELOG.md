@@ -15,6 +15,15 @@ Changes prior to 3.0 were already dropped in that file.
 
 ### Added
 
+- Cross-compile with m68k-amigaos-gcc (bebbo toolchain, libnix): `make` in
+  the top level directory builds `build/V` (via `Source/makefile.gcc`).
+  Generated GCC inlines for muimaster (plus private `MUIP_GetVirtualRect`),
+  v_plugin, v_about, vssl and iconv; `sasc_compat.c` supplies the sc.lib
+  calls (`stccpy`, `stpblk`, `utunpk`, `__datecvt`, ...) and a working
+  `SetSuperAttrs` (the toolchain's libamiga one jumps through the wrong
+  pointer). The malloc pool is set up by a libnix constructor since libnix
+  stdio allocates before `main()`. libmath64 and `sup.s` are not used with
+  GCC.
 - Print dialog, menu/toolbar/ARexx `Print ASK`, text dump to `PRT:`, and
   graphical `printer.device` band dumps (`PRD_TPEXTDUMPRPORT` when
   `Turboprint:` is assigned).

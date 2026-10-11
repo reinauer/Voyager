@@ -1,3 +1,8 @@
 *.o
 *.uaem
 output.txt
+Source/objects/
+Source/V.amigaos.gcc
+Source/V.gcc.debug
+build/
+Internet/Voyager/V.gcc

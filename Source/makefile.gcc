@@ -1,0 +1,123 @@
+# GNU makefile for building Voyager with m68k-amigaos-gcc (bebbo toolchain)
+#
+# make -f makefile.gcc          builds V.amigaos.gcc (and V.gcc.debug with symbols)
+# make -f makefile.gcc clean
+#
+# Object lists mirror smakefile. Differences from the SAS/C build:
+#  - libmath64 is not needed, GCC has long long (see time_func.c)
+#  - sup.s is not used, it relies on SAS/C's A4 small data base
+#    (prefs.c has the C fpn()/getprefs())
+#  - voyager_cat.o is not needed, locale.c builds CatCompArray itself
+
+CROSS    ?= m68k-amigaos-
+CC       = $(CROSS)gcc
+STRIP    = $(CROSS)strip
+VASM     ?= vasmm68k_mot
+
+OBJDIR   = objects/gcc
+TARGET   = V.amigaos.gcc
+
+CPU      ?= 68020
+
+DEFINES  = -DAMIGAOS -DNO_INLINE_STDARG
+INCLUDES = -I. -Ivat -Iincludestuff -Iimgdecode -Iaboutstuff -Ipluginapi -Ilibmath64
+CFLAGS   = -noixemul -m$(CPU) -Os -fomit-frame-pointer -funsigned-char \
+	-fno-strict-aliasing -fcommon \
+	-Werror=implicit-function-declaration -Wno-int-conversion \
+	-Wno-incompatible-pointer-types -Wno-pointer-sign \
+	$(DEFINES) $(INCLUDES)
+# NDK assembler includes (exec/types.i etc.) shipped with the toolchain
+NDK_INC  ?= $(dir $(shell command -v $(CC)))../m68k-amigaos/ndk-include
+ASFLAGS  = -quiet -Faout -m$(CPU) -devpac -DGCC=1 -Iincludestuff -I$(NDK_INC)
+LDFLAGS  = -noixemul -m$(CPU) -Wl,-u,___stkinit
+LIBS     = -lmui -lm -lamiga -ldebug
+
+COBJS = \
+	plugins.o parse.o urlparser.o network.o init.o amicon.o autoproxy.o \
+	gauge.o history.o urlstring.o frameborder.o jscript.o printrequest.o \
+	searchrequest.o fastlinkbutton.o fastlinkgroup.o ddstring.o \
+	sendmailwin.o frame.o prefs.o sourceview.o colortable.o netinfo.o \
+	authenticate.o cookies.o certificates.o http.o ledclass.o mime.o \
+	smartlabel.o docinfowin.o ftp.o cache.o dns.o imgstub.o fonttestclass.o \
+	fontcache.o main.o cookiebrowser.o authbrowser.o historylist.o \
+	js_object.o js_navigator.o js_real.o js_string.o js_bool.o \
+	js_location.o js_screen.o js_link.o js_event.o js_regexp.o js_objref.o \
+	js_array.o js_func.o js_date.o js_plugin.o js_mimetype.o app.o button.o \
+	errorwin.o prunecache.o js_gc.o js_math.o prefswin_main.o \
+	prefswin_cache.o prefswin_certs.o prefswin_colors.o \
+	prefswin_fastlinks.o prefswin_fonts.o prefswin_general.o \
+	prefswin_hyperlinks.o prefswin_images.o prefswin_javascript.o \
+	prefswin_languages.o prefswin_mailnews.o prefswin_network.o \
+	prefswin_security.o prefswin_spoof.o prefswin_toolbar.o \
+	prefswin_download.o prefswin_list.o debug.o pluginswin.o \
+	pluginswin_list.o lo_anchor.o lo_group.o lo_table.o htmlview.o \
+	lo_frameset.o htmlwin.o layout_main.o layout_parse.o lo_div.o lo_br.o \
+	lo_dummy.o lo_form.o lo_image.o lo_hr.o lo_button.o lo_formbutton.o \
+	lo_formtext.o toolbar.o lo_formhidden.o lo_formcycle.o formpost.o \
+	lo_radio.o lo_checkbox.o lo_formtextfield.o lo_formfile.o lo_map.o \
+	lo_area.o lo_li.o locale.o lo_margin.o lo_embed.o lo_form_option.o \
+	clock.o host_os.o methodstack.o mui_func.o time_func.o update.o file.o \
+	malloc.o win_func.o rexx.o cssengine.o clip.o regcomp.o regfree.o \
+	regexec.o regerror.o menus.o nlist.o template.o sizegroup.o sur_gauge.o \
+	lineread.o async.o
+
+COBJS_NODEP = \
+	sasc_compat.o js_parser.o css_parser.o snprintf.o
+
+AMIGAOBJS = \
+	mybrush.o nagwin.o executive.o tearoff.o bitmapclone.o textfit2.o \
+	splashwin.o commandclass.o cmanager.o prefswin_contextmenu.o download.o \
+	smartreq.o
+
+PLATFORMOBJS = \
+	prefsimages.o
+
+ASMOBJS = hash.o idea68k.o textfit.o
+
+IMGDECOBJS = \
+	imgdecode/adler32.o imgdecode/c2p_generic.o \
+	imgdecode/callbackfunctable.o imgdecode/crc32.o imgdecode/errorreq.o \
+	imgdecode/gif.o imgdecode/imgdecode.o imgdecode/infblock.o \
+	imgdecode/infcodes.o imgdecode/inffast.o imgdecode/inflate.o \
+	imgdecode/inftrees.o imgdecode/infutil.o imgdecode/jcomapi.o \
+	imgdecode/jdapimin.o imgdecode/jdapistd.o imgdecode/jdcoefct.o \
+	imgdecode/jdcolor.o imgdecode/jddctmgr.o imgdecode/jdhuff.o \
+	imgdecode/jdinput.o imgdecode/jdmainct.o imgdecode/jdmarker.o \
+	imgdecode/jdmaster.o imgdecode/jdmerge.o imgdecode/jdphuff.o \
+	imgdecode/jdpostct.o imgdecode/jdsample.o imgdecode/jidctflt.o \
+	imgdecode/jidctfst.o imgdecode/jidctint.o imgdecode/jidctred.o \
+	imgdecode/jmemmgr.o imgdecode/jmemnobs.o imgdecode/jquant1.o \
+	imgdecode/jquant2.o imgdecode/jutils.o imgdecode/lib.o \
+	imgdecode/libfunctable.o imgdecode/libfunctions.o \
+	imgdecode/mimebrushes.o imgdecode/png.o imgdecode/pngerror.o \
+	imgdecode/pngmem.o imgdecode/pngpread.o imgdecode/pngread.o \
+	imgdecode/pngrio.o imgdecode/pngrtran.o imgdecode/pngrutil.o \
+	imgdecode/pngset.o imgdecode/pngtrans.o imgdecode/zutil.o
+
+IMGDECASMOBJS = imgdecode/c2p.o
+
+OBJS = $(addprefix $(OBJDIR)/, $(COBJS) $(COBJS_NODEP) $(AMIGAOBJS) \
+	$(PLATFORMOBJS) $(ASMOBJS) $(IMGDECOBJS) $(IMGDECASMOBJS))
+
+.PHONY: all clean
+
+all: $(TARGET)
+
+$(TARGET): $(OBJS)
+	$(CC) $(LDFLAGS) -o V.gcc.debug $(OBJS) $(LIBS)
+	$(STRIP) -o $@ V.gcc.debug
+
+$(OBJDIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
+# Static pattern rule: hash.c and textfit.c are the MorphOS C versions with
+# stack arguments, the 68k callers use the register based .s versions
+$(addprefix $(OBJDIR)/, $(ASMOBJS) $(IMGDECASMOBJS)): $(OBJDIR)/%.o: %.s
+	@mkdir -p $(dir $@)
+	$(VASM) $(ASFLAGS) -o $@ $<
+
+-include $(OBJS:.o=.d)
+
+clean:
+	rm -rf $(OBJDIR) $(TARGET) V.gcc.debug
