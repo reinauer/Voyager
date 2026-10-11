@@ -51,6 +51,43 @@ unsigned long _MSTEP = 4096;
 
 #if USE_MALLOC
 
+#if defined( __GNUC__ ) && !defined( __MORPHOS__ )
+/*
+ * libnix calls malloc()/free() for stdio before main() and after it
+ * returns, so the pool is set up and torn down by libnix constructors
+ * (same priority as libnix' own malloc) instead of init()/cleanup().
+ */
+#include <stabs.h>
+
+void gcc_init_malloc( void )
+{
+	InitSemaphore( &msem );
+	mallocpool = CreatePool( 0, 4096, 2048 );
+}
+
+void gcc_cleanup_malloc( void )
+{
+	if( mallocpool )
+	{
+		DeletePool( mallocpool );
+		mallocpool = NULL;
+	}
+}
+
+ADD2INIT( gcc_init_malloc, -50 );
+ADD2EXIT( gcc_cleanup_malloc, -50 );
+
+int init_malloc( void )
+{
+	return( mallocpool ? TRUE : FALSE );
+}
+
+void cleanup_malloc( void )
+{
+}
+
+#else
+
 int init_malloc( void )
 {
 	D( db_init, bug( "initializing..\n" ) );
@@ -69,6 +106,8 @@ void cleanup_malloc( void )
 		DeletePool( mallocpool );
 	}
 }
+
+#endif /* __GNUC__ && !__MORPHOS__ */
 
 
 void *malloc( size_t size )

@@ -4,6 +4,8 @@
 
 #include <string.h>
 #include <ctype.h>
+#include <intuition/classusr.h>
+#include <clib/alib_protos.h>
 #include "sasc_compat.h"
 
 /* Seconds between 1.1.1970 and the AmigaDOS epoch 1.1.1978 */
@@ -208,4 +210,20 @@ long utpack( const char *v )
 	days += v[ 2 ] - 1;
 
 	return( (long)( days * 86400L + v[ 3 ] * 3600L + v[ 4 ] * 60L + v[ 5 ] ) );
+}
+
+/*
+ * The libamiga.a SetSuperAttrs() of the bebbo toolchain loads the
+ * superclass from the stack instead of cl->cl_Super and jumps into
+ * garbage, so provide a working one.
+ */
+ULONG SetSuperAttrs( struct IClass *cl, Object *obj, ULONG tag1, ... )
+{
+	struct opSet ops;
+
+	ops.MethodID = OM_SET;
+	ops.ops_AttrList = (struct TagItem *)&tag1;
+	ops.ops_GInfo = NULL;
+
+	return( DoSuperMethodA( cl, obj, (Msg)&ops ) );
 }
