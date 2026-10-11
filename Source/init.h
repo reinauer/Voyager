@@ -76,6 +76,8 @@ int init_locale( void );
 void init_internalipc( void );
 int mcccheck( void );
 void close_bundled_mccs( void );
+/* opens a MUI class from LIBS:mui or the Voyager drawer's Libs/mui */
+struct Library *open_progdir_mcc( STRPTR name );
 void check_for_nlist( void );
 int create_js_object( void );
 int create_js_objref( void );

@@ -42,6 +42,7 @@
 #include "voyager_cat.h"
 #include "mui_func.h"
 #include "dos_func.h"
+#include "init.h"
 #if !USE_VAT
 #include "async.h" /* VAT_OpenLibrary() */
 #include "md5.h"
@@ -123,6 +124,11 @@ int bm_create( void )
 		if( !cmlib_keep )
 			cmlib_keep = OpenLibrary( "PROGDIR:Libs/CManager.library", 10 );
 	}
+	/*
+	 * MUI only looks for classes in LIBS:mui; load CManager.mcc from the
+	 * drawer like the other bundled classes (closed by close_bundled_mccs()).
+	 */
+	open_progdir_mcc( MUIC_CManager );
 
 	win_bm = WindowObject,
 		MUIA_Window_ID   , MAKE_ID('B','O','O','K'),

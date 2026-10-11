@@ -1157,7 +1157,7 @@ static int copy_mcc_file( STRPTR from, STRPTR to )
 /*
  * Search LIBS:mui then <program dir>/Libs/mui (the merged Voyager Libs drawer).
  */
-static struct Library *open_progdir_mcc( STRPTR name )
+struct Library *open_progdir_mcc( STRPTR name )
 {
 	char libspath[ 256 ];
 	char path[ 256 ];
