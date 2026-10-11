@@ -370,6 +370,7 @@ int initstuff( void )
 	VoyLog(( "[INIT] Calling create_authbrowserwinclass()...\n" ));
 	if( !create_authbrowserwinclass() ) { VoyLog(( "[INIT] create_authbrowserwinclass() failed!\n" )); return( FALSE ); }
 	VoyLog(( "[INIT] create_authbrowserwinclass() succeeded\n" ));
+#endif /* USE_NET */
 #if USE_NET
 	VoyLog(( "[INIT] Calling create_cookiebrowserwinclass()...\n" ));
 	if( !create_cookiebrowserwinclass() ) { VoyLog(( "[INIT] create_cookiebrowserwinclass() failed!\n" )); return( FALSE ); }

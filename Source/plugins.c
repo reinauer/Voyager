@@ -84,7 +84,7 @@ static UWORD __chip i_plugin[3][28] = {
 	},
 };
 
-#define BITMAP(x) {4,14,0,3,0,(PLANEPTR)&##x##[0][0],(PLANEPTR)&##x##[1][0],(PLANEPTR)&##x##[2][0]} 
+#define BITMAP(x) {4,14,0,3,0,(PLANEPTR)&x[0][0],(PLANEPTR)&x[1][0],(PLANEPTR)&x[2][0]} 
 
 static struct BitMap plugin_bm  = BITMAP( i_plugin );
 #endif /* !MBX */
