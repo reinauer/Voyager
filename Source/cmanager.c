@@ -42,10 +42,20 @@
 #include "voyager_cat.h"
 #include "mui_func.h"
 #include "dos_func.h"
+#if !USE_VAT
+#include "async.h" /* VAT_OpenLibrary() */
+#include "md5.h"
+#endif
 
 struct Library *CManagerBase;
 APTR cm_obj;
 static APTR win_bm;
+/*
+ * CManager.mcc opens CManager.library by name. The Voyager drawer ships it
+ * in Libs/, so load it from there first (once in memory, opening it by
+ * name finds it).
+ */
+static struct Library *cmlib_keep;
 
 /*
  * Call before calling a CManager (CM_#?) function.
@@ -57,6 +67,9 @@ int init_cmanagerbase( void )
 	if( !CManagerBase )
 	{
 		CManagerBase = VAT_OpenLibrary( "CManager.library", 10 );
+		/* the Voyager drawer ships it in Libs/ */
+		if( !CManagerBase )
+			CManagerBase = OpenLibrary( "PROGDIR:Libs/CManager.library", 10 );
 	}
 	return( ( int )CManagerBase );
 }
@@ -104,6 +117,13 @@ int bm_create( void )
 		return( TRUE );
 	}
 
+	if( !cmlib_keep )
+	{
+		cmlib_keep = VAT_OpenLibrary( "CManager.library", 10 );
+		if( !cmlib_keep )
+			cmlib_keep = OpenLibrary( "PROGDIR:Libs/CManager.library", 10 );
+	}
+
 	win_bm = WindowObject,
 		MUIA_Window_ID   , MAKE_ID('B','O','O','K'),
 		MUIA_Window_Title, GS( BOOK_TITLE ),
@@ -136,6 +156,8 @@ int bm_create( void )
 	DoMethod( win_bm, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
 		app, 6, MUIM_Application_PushMethod, win_bm, 3, MUIM_Set, MUIA_Window_Open, FALSE
 	);
+
+	return( TRUE );
 }
 
 /*
@@ -200,6 +222,12 @@ void bm_cleanup( void )
 		bm_save( FALSE );
 		DoMethod( cm_obj, MUIM_CManager_Cleanup, FALSE ); /* ranieri broke this call by adding a fucking parameter.. */
 	}
+	if( cmlib_keep )
+	{
+		/* CManager.mcc keeps its own open count */
+		CloseLibrary( cmlib_keep );
+		cmlib_keep = NULL;
+	}
 }
 
 void addtobookmarks( char *url, char *title )
@@ -243,7 +271,11 @@ void ASM SAVEDS magicfunc(
 	*str = "Voyager";
 	*ver = 1;
 
+#if USE_VAT
 	VAT_CalcMD5( *data, *datasize, md5 );
+#else
+	voy_calcmd5( *data, *datasize, (unsigned char *)md5 );
+#endif
 
 	*data = (APTR)md5;
 	*datasize = 16;

@@ -23,6 +23,10 @@ Requirements: MUI, a TCP/IP stack (bsdsocket.library). AmiTLS
 cybergraphics.library is opened when first needed for RTG
 (IsCyberModeID). Printing uses printer.device / PRT: (TurboPrint
 if Turboprint: is assigned). UTF-8 HTML is mapped to Latin-1.
+Bookmarks use CManager (Libs/CManager.library and
+Libs/mui/CManager.mcc in this drawer), which needs the NList
+classes (NList.mcc, NListview.mcc; part of MUI 5, on Aminet for
+MUI 3.8).
 
 Runtime vapor_toolkit.library dependencies and keyfile checks are 
 removed in this Free and Open Source release.
@@ -47,6 +51,8 @@ Newsflash: 3.5.2 compared with a 3.2 binary install
   without BMF_SPECIALFMT still use CGX paths)
 
 * SpeedBar toolbar enabled; TearOff panels disabled
+
+* Bookmarks (CManager) enabled again
 
 * No vapor_toolkit.library / keyfile; GPL, no registration nag
 

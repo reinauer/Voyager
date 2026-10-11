@@ -334,7 +334,7 @@ STRPTR voyager_catalog_str( ULONG msgid, STRPTR builtin );
 #define USE_CGX            1
 #define USE_CLIPBOARD      1
 #define USE_CLOCK          1
-#define USE_CMANAGER       0
+#define USE_CMANAGER       1
 #define USE_CONNECT_PROC   0
 #define USE_DOS            1
 #define USE_DBUF_RESIZE    0

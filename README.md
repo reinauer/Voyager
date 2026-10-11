@@ -316,6 +316,7 @@ Notable changes in 3.5.2 compared to a stock 3.2 binary install are restoration 
 - Image decoder linked into the executable (not a separate `vimgdecode.library` selected at runtime)
 - CyberGraphX pixel-write paths; `cybergraphics.library` opened deferred; RTG via `IsCyberModeID` (OS4 screens without `BMF_SPECIALFMT` still count as CGX)
 - SpeedBar toolbar enabled; TearOff panels disabled due to Enforcer hits in the MUI TearOff.mcc
+- Bookmarks through CManager (`CManager.library` and `CManager.mcc` in the drawer, needs the NList classes)
 - Runtime `vapor_toolkit.library` and keyfile checks removed; registration nag removed
 - HTTPS via AmiTLS (`amitls.library`, BearSSL, TLS 1.2, SNI) as a new `voyager_ssl.vlib`; OpenSSL 0.9 under `Source/VSSL/openssl` is historical and not linked
 - Default User-Agent uses Firefox 4 grammar with AmigaVoyager in the Mozilla comment so current CDNs do not reject the client; the Spoof menu can still identify as Voyager

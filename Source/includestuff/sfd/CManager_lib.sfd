@@ -1,0 +1,27 @@
+==id $Id: CManager_lib.sfd,v 10.2 (offsets from ppcinline/CManager.h) $
+* "CManager.library"
+==base _CManagerBase
+==basetype struct Library *
+==libname CManager.library
+==bias 30
+==public
+APTR CM_StartManager(STRPTR file, STRPTR pubscreen) (a0,a1)
+BOOL CM_LoadDataOld(STRPTR prefs, struct CMDataOld * data, STRPTR user) (a0,a1,a2)
+VOID CM_SaveDataOld(STRPTR prefs, struct CMDataOld * data, STRPTR user) (a0,a1,a2)
+VOID CM_FreeDataOld(struct CMDataOld * data) (a0)
+struct CMGroup  * CM_GetParent(struct CMGroup * list, struct CMGroup * current) (a0,a1)
+APTR CM_AllocEntry(ULONG type) (d0)
+VOID CM_FreeEntry(APTR entry) (a0)
+VOID CM_FreeHandle(APTR handle, BOOL close) (a0,d0)
+APTR CM_GetEntry(APTR handle, ULONG flags) (a0,d0)
+struct BitMap   * CM_CreateBitMap(ULONG width, ULONG height, ULONG depth, ULONG flags, struct BitMap * friend) (d0,d1,d2,d3,a0)
+VOID CM_DeleteBitMap(struct BitMap * bitmap) (a0)
+BOOL CM_AddEntry(APTR entry) (a0)
+VOID CM_FreeList(struct MinList * list) (a0)
+struct CMData   * CM_LoadCurrentUserData(BOOL askuser) (d0)
+BOOL CM_LoadData(STRPTR prefs, struct CMData * data, STRPTR user) (a0,a1,a2)
+VOID CM_SaveData(STRPTR prefs, struct CMData * data, STRPTR user) (a0,a1,a2)
+VOID CM_FreeData(struct CMData * data) (a0)
+struct CMData   * CM_AllocCMData() ()
+STRPTR CM_GetString(ULONG id) (d0)
+==end

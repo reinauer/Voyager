@@ -83,6 +83,8 @@ void FreeVecPooled(APTR poolheader, APTR memory);
 struct Screen *VAT_GetAppScreen(APTR app);
 STRPTR VAT_GetAppScreenName(APTR app);
 int VAT_SendRXMsg(STRPTR cmd, STRPTR basename, STRPTR suffix);
+struct Library *VAT_OpenLibrary(STRPTR libname, ULONG libversion);
+struct Library *VAT_OpenLibraryCode(ULONG libcode);
 
 #endif /* !VAT_LIB_H */
 
