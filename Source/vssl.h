@@ -122,6 +122,10 @@ void VSSL_SetDefaultOptions( ULONG options );
 APTR VSSL_ConnectHost( APTR ctx, int sock, STRPTR hostname );
 ULONG VSSL_Pending( APTR ssl );
 
+#if defined( __GNUC__ ) && !defined( __MORPHOS__ )
+#include <inline/vssl.h>
+#endif
+
 #define SSL_OP_MICROSOFT_SESS_ID_BUG			0x00000001L
 #define SSL_OP_NETSCAPE_CHALLENGE_BUG			0x00000002L
 #define SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG		0x00000008L
