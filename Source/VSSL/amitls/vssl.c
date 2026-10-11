@@ -71,6 +71,32 @@
 
 /* Voyager stores these flags; AmiTLS ignores SSLv2/v3/TLS1 bits. */
 #define SSL_OP_ALL					0x000FFFFFUL
+/*
+ * Voyager private context option (VSSL_CTX_Set_Options): connections of
+ * this context do not verify the server certificate. Voyager uses a second
+ * context with it for hosts the user accepted in the certificate requester.
+ * Must match VSSL_OP_NO_VERIFY in Source/vssl.h.
+ */
+#define VSSL_OP_NO_VERIFY			0x00800000UL
+
+/* BearSSL X.509 error codes (bearssl_x509.h), from TlsGetCertVerifyDetail() */
+static const struct { LONG code; const char *text; } vssl_x509_reasons[] = {
+	{ 27, "Certificate signature is invalid" },
+	{ 35, "The server sent no certificate" },
+	{ 49, "Certificate uses an unsupported algorithm" },
+	{ 51, "Certificate uses an unsupported key type" },
+	{ 52, "Certificate signature is invalid" },
+	{ 53, "Certificate dates cannot be checked (system clock)" },
+	{ 54, "Certificate expired or not yet valid (check the clock)" },
+	{ 55, "Certificate chain is broken (issuer mismatch)" },
+	{ 56, "Certificate is not valid for this host name" },
+	{ 57, "Certificate has an unsupported critical extension" },
+	{ 58, "Certificate chain contains an issuer that is not a CA" },
+	{ 59, "Certificate key usage does not allow TLS" },
+	{ 60, "Certificate key is too weak" },
+	{ 62, "Certificate is not signed by a trusted authority" },
+	{ 0, NULL }
+};
 
 struct VSSL_CacheInfo {
 	int sess_number;
@@ -437,6 +463,43 @@ vssl_hash_str(STRPTR s)
 	return h;
 }
 
+/*
+ * A connection that already failed verification: no TLS state, VSSL_Write
+ * fails and VSSL_GetVerifyResult reports the reason, so Voyager can ask
+ * the user and reconnect without verification.
+ */
+static APTR
+vssl_verify_failed_conn(struct vssl_ctx *ctx, int sock, const char *reason)
+{
+	struct vssl_conn *conn;
+
+	conn = (struct vssl_conn *)AllocVec(sizeof(*conn), VSSL_MEM_FLAGS);
+	if (conn == NULL) {
+		return NULL;
+	}
+	conn->magic = VSSL_CONN_MAGIC;
+	conn->ctx = ctx;
+	conn->sock = sock;
+	conn->verify_rc = 2;
+	strncpy(conn->verify_err, reason, sizeof(conn->verify_err) - 1);
+	strcpy(conn->cipher, "AmiTLS");
+	strcpy(conn->version, "TLSv1.2");
+	return (APTR)conn;
+}
+
+static const char *
+vssl_x509_reason(LONG brerr)
+{
+	int i;
+
+	for (i = 0; vssl_x509_reasons[i].text != NULL; i++) {
+		if (vssl_x509_reasons[i].code == brerr) {
+			return vssl_x509_reasons[i].text;
+		}
+	}
+	return NULL;
+}
+
 static APTR
 vssl_do_connect(struct vssl_ctx *ctx, int sock, STRPTR hostname)
 {
@@ -448,9 +511,16 @@ vssl_do_connect(struct vssl_ctx *ctx, int sock, STRPTR hostname)
 	LONG rc;
 	ULONG nbio;
 	ULONG n;
+	ULONG verify;
 
 	if (ctx == NULL || sock < 0) {
 		return NULL;
+	}
+
+	verify = (ctx->options & VSSL_OP_NO_VERIFY) ? ATSSL_VERIFY_NONE : ctx->verify;
+	if (verify != ATSSL_VERIFY_NONE && ctx->ca_path[0] == '\0') {
+		return vssl_verify_failed_conn(ctx, sock,
+			"No CA certificate bundle (Certificates/cacert.pem)");
 	}
 
 	if (hostname == NULL || hostname[0] == '\0') {
@@ -494,7 +564,7 @@ vssl_do_connect(struct vssl_ctx *ctx, int sock, STRPTR hostname)
 
 	n = 0;
 	tags[n].ti_Tag = ATTA_SSL_VERIFY;
-	tags[n].ti_Data = ctx->verify;
+	tags[n].ti_Data = verify;
 	n++;
 	tags[n].ti_Tag = TAG_DONE;
 	tags[n].ti_Data = 0;
@@ -503,6 +573,11 @@ vssl_do_connect(struct vssl_ctx *ctx, int sock, STRPTR hostname)
 	if (rc != 0) {
 		DisposeTlsConnection(tls);
 		DisposeTlsContext(own);
+		if (rc == ERROR_TLS_VERIFY) {
+			/* trust store could not be loaded */
+			return vssl_verify_failed_conn(ctx, sock,
+				"The CA certificate bundle could not be loaded");
+		}
 		return NULL;
 	}
 
@@ -611,12 +686,14 @@ APTR ASM SAVEDS VSSL_Create_CTX(void)
 	}
 	ctx->magic = VSSL_CTX_MAGIC;
 	ctx->options = ssl_options;
+	/*
+	 * Always verify. Without a CA bundle connections fail verification
+	 * (see vssl_do_connect) so Voyager asks the user, instead of silently
+	 * accepting any certificate.
+	 */
 	ctx->verify = ATSSL_VERIFY_PEER;
 
 	ca = vssl_find_ca(ctx->ca_path, (ULONG)sizeof(ctx->ca_path));
-	if (ca == NULL) {
-		ctx->verify = ATSSL_VERIFY_NONE;
-	}
 
 	n = 0;
 	basetags[n].ti_Tag = ATBT_SSL_VERIFY;
@@ -770,9 +847,12 @@ vssl_note_write_rc(struct vssl_conn *conn, LONG rc)
 		err = rc;
 	}
 	if (err == ERROR_TLS_VERIFY || rc == ERROR_TLS_VERIFY) {
+		const char *reason;
+
 		conn->hs_ok = 1;
 		conn->verify_rc = 2;
-		es = TlsGetErrorString(err);
+		reason = vssl_x509_reason(TlsGetCertVerifyDetail(conn->tls));
+		es = reason != NULL ? (STRPTR)reason : TlsGetErrorString(err);
 		if (es != NULL) {
 			strncpy(conn->verify_err, (char *)es, sizeof(conn->verify_err) - 1);
 		} else {
@@ -1129,19 +1209,14 @@ int ASM SAVEDS VSSL_X509_HaveSubjectCert(__reg(a0, APTR pctx), __reg(a1, X509 *c
 
 int ASM SAVEDS VSSL_X509_fingerprint(__reg(a0, X509 *pcert), __reg(a1, UBYTE *md5))
 {
-	struct vssl_cert *cert;
-	ULONG h;
-	int i;
-
-	cert = vssl_cert_ok((APTR)pcert);
-	if (cert == NULL || md5 == NULL) {
-		return (0);
-	}
-	h = vssl_hash_str(cert->tpc.tpc_Subject);
-	for (i = 0; i < 16; i++) {
-		md5[i] = (UBYTE)((h >> ((i & 3) * 8)) ^ (ULONG)(i * 17));
-	}
-	return (16);
+	/*
+	 * AmiTLS does not expose the certificate DER, so there is no real
+	 * fingerprint. Report none rather than a made-up one; Voyager then
+	 * leaves the FINGERPRINT section out.
+	 */
+	(void)pcert;
+	(void)md5;
+	return (0);
 }
 
 void ASM SAVEDS VSSL_X509_serialnumber(__reg(a0, X509 *pcert), __reg(a1, UBYTE *to))

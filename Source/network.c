@@ -448,6 +448,72 @@ NETBASE;
 
 #if USE_SSL
 APTR ssl_ctx;
+/* hosts the user accepted in the certificate requester connect with this */
+APTR ssl_ctx_noverify;
+
+#define SSL_ACCEPTED_HOSTS "PROGDIR:Certificates/AcceptedHosts"
+
+/*
+ * Remember a host whose certificate the user accepted although it did not
+ * verify; with save it is also appended to SSL_ACCEPTED_HOSTS so later
+ * sessions accept it too. AmiTLS gives no certificate data on a failed
+ * verification, so this trusts the host name, not a particular certificate.
+ */
+void sslcert_accept( char *host, int save )
+{
+	struct Node *n;
+
+	if( !host || !*host )
+		return;
+
+	if( !FINDNAME( &sslcertlist, host ) )
+	{
+		n = (APTR)nalloc( sizeof( *n ) + strlen( host ) + 1 );
+		if( n )
+		{
+			n->ln_Name = (char *)( n + 1 );
+			strcpy( n->ln_Name, host );
+			ADDTAIL( &sslcertlist, n );
+		}
+	}
+
+#if USE_DOS
+	if( save )
+	{
+		BPTR f;
+
+		UnLock( CreateDir( "PROGDIR:Certificates" ) );
+		f = Open( SSL_ACCEPTED_HOSTS, MODE_READWRITE );
+		if( f )
+		{
+			Seek( f, 0, OFFSET_END );
+			FPrintf( f, "%s\n", (LONG)host );
+			Close( f );
+		}
+	}
+#endif
+}
+
+static void sslcert_loadaccepted( void )
+{
+#if USE_DOS
+	char line[ 256 ];
+	BPTR f = Open( SSL_ACCEPTED_HOSTS, MODE_OLDFILE );
+
+	if( !f )
+		return;
+	while( FGets( f, line, sizeof( line ) ) )
+	{
+		char *p = line + strlen( line );
+
+		while( p > line && ( p[ -1 ] == '\n' || p[ -1 ] == '\r' || p[ -1 ] == ' ' ) )
+			*--p = 0;
+		if( line[ 0 ] && line[ 0 ] != '#' )
+			sslcert_accept( line, FALSE );
+	}
+	Close( f );
+#endif
+}
 #endif /* USE_SSL */
 #endif /* USE_NET */
 
@@ -539,6 +605,11 @@ int openssl( void )
 			return( FALSE );
 		}
 		VSSL_AddCertDir( ssl_ctx, "PROGDIR:Certificates" );
+
+		ssl_ctx_noverify = VSSL_Create_CTX();
+		if( ssl_ctx_noverify )
+			VSSL_CTX_Set_Options( ssl_ctx_noverify, opts | VSSL_OP_NO_VERIFY );
+		sslcert_loadaccepted();
 	}
 
 	return( TRUE );
@@ -563,7 +634,12 @@ void closessl( void )
 #ifndef MBX
 		if( VSSLBase )
 #endif
+		{
 			VSSL_Free_CTX( ssl_ctx );
+			if( ssl_ctx_noverify )
+				VSSL_Free_CTX( ssl_ctx_noverify );
+		}
+		ssl_ctx_noverify = NULL;
 /* MiamiSSL deprecated - commented out
 #if USE_MIAMI
 		else

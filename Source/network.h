@@ -263,6 +263,8 @@ extern struct Library *VSSLBase;
 extern struct Library *MiamiSSLBase;
 */
 extern APTR ssl_ctx;
+extern APTR ssl_ctx_noverify;
+void sslcert_accept( char *host, int save );
 extern struct List sslcertlist;
 
 /*

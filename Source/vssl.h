@@ -150,6 +150,10 @@ ULONG VSSL_Pending( APTR ssl );
 #define SSL_OP_NON_EXPORT_FIRST 			0x40000000L
 #define SSL_OP_NETSCAPE_DEMO_CIPHER_CHANGE_BUG		0x80000000L
 #define SSL_OP_ALL					0x000FFFFFL
+/* Voyager private: connections of this context skip certificate
+ * verification (hosts accepted in the certificate requester). Must match
+ * VSSL_OP_NO_VERIFY in VSSL/amitls/vssl.c. */
+#define VSSL_OP_NO_VERIFY				0x00800000L
 
 #define SSL_OP_NO_SSLv2					0x01000000L
 #define SSL_OP_NO_SSLv3					0x02000000L

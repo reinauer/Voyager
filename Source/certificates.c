@@ -294,10 +294,13 @@ int certreq_ask( X509 *cert, char *error, VSSLBASE, struct unode *un )
 	struct MsgPort *replyport = CreateMsgPort();
 	struct certmsg cm;
 
+	if( !replyport )
+		return( 0 );
+
 	memset( &cm, 0, sizeof( cm ) );
 
-	stccpy( cm.cert_error, error, sizeof( cm.cert_error ) );
-	strcpy( cm.cert_info, un->sslpeercert );
+	stccpy( cm.cert_error, error ? error : "", sizeof( cm.cert_error ) );
+	stccpy( cm.cert_info, un->sslpeercert ? (char *)un->sslpeercert : "", sizeof( cm.cert_info ) );
 	//cert_getinfo( cert, cm.cert_info, VSSLBase );
 
 
@@ -322,28 +325,11 @@ int certreq_ask( X509 *cert, char *error, VSSLBASE, struct unode *un )
 
 	DeleteMsgPort( replyport );
 
-#if USE_DOS
-	if( cm.rc == 2 )
-	{
-		char name[ 128 ];
-		FileLock_p f;
-		int cnt;
-		ULONG h = VSSL_X509_NameHash( cert );
-
-		// save the damned cert
-		UnLock( CreateDir( "PROGDIR:Certificates" ) );
-
-		for( cnt = 0; cnt < 16383; cnt++ )
-		{
-			sprintf( name, "PROGDIR:Certificates/%08lx.%ld", h, cnt );
-			if( !( f = Lock( name, SHARED_LOCK ) ) )
-				break;
-			UnLock( f );
-		}
-		VSSL_WriteCertPEM( cert, name );
-	}
-#endif
-
+	/*
+	 * rc 1 accepts this time, rc 2 also saves; the caller remembers the host
+	 * (sslcert_accept()). AmiTLS has no certificate data to save on a failed
+	 * verification, the old PEM writer only produced a text summary.
+	 */
 	return( cm.rc );
 }
 #endif

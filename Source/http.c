@@ -175,6 +175,10 @@ void un_setup_https( struct unode *un )
 /*
  * Builds up and sends the HTTP request.
  */
+#if USE_SSL
+static int un_doprotocol_http_ssl_verify_failed( struct unode *un );
+#endif
+
 static void un_doprotocol_http_req( struct unode *un )
 {
 	char buffer[ 8192 ], *bp; /* XXX: possible overflow here ? yes. we should rewrite that handling.. sucks */
@@ -389,6 +393,8 @@ static void un_doprotocol_http_req( struct unode *un )
 	{
 		if( wrc <= 0 )
 		{
+			if( un_doprotocol_http_ssl_verify_failed( un ) )
+				return;
 			net_log( "ssl_setup: request write failed host=%s rc=%ld errno=%ld\n",
 				un->purl.host ? (char *)un->purl.host : "",
 				(long)wrc, (long)Errno() );
@@ -1192,7 +1198,12 @@ static void un_doprotocol_http_ssl_setup( struct unode *un )
 		net_log( "ssl_setup: ConnectHost host=%s sock=%ld ctx=%lx\n",
 			un->purl.host ? (char *)un->purl.host : "",
 			(long)un->sock, (ULONG)(APTR)ssl_ctx );
-		un->sslh = VSSL_ConnectHost( ssl_ctx, un->sock,
+		APTR ctx = ssl_ctx;
+
+		/* the user accepted this host's certificate in the requester */
+		if( ssl_ctx_noverify && un->purl.host && FINDNAME( &sslcertlist, un->purl.host ) )
+			ctx = ssl_ctx_noverify;
+		un->sslh = VSSL_ConnectHost( ctx, un->sock,
 			un->purl.host ? (STRPTR)un->purl.host : (STRPTR)"localhost" );
 	}
 /* MiamiSSL deprecated - commented out
@@ -1253,41 +1264,14 @@ static int un_doprotocol_http_ssl_after_write( struct unode *un )
 		return FALSE;
 	}
 
+	/*
+	 * The handshake succeeded, so the certificate verified (or the host was
+	 * accepted by the user, see un_doprotocol_http_ssl_verify_failed()).
+	 */
+	cert_info[ 0 ] = 0;
 	cert_getinfo( peercert, cert_info, VSSLVAR );
 	un->sslpeercert = StrDupPooled( un->pool, cert_info );
-
-	if( !FINDNAME( &sslcertlist, un->purl.host ) )
-	{
-		char *errorp;
-		int rc;
-
-		rc = VSSL_GetVerifyResult( un->sslh, &errorp );
-		net_log( "ssl_setup: verify rc=%ld host=%s\n",
-			(long)rc, un->purl.host ? (char *)un->purl.host : "" );
-		if( rc >= 2 )
-		{
-			rc = certreq_ask( peercert, errorp, VSSLVAR, un );
-			if( !rc )
-			{
-				strcpy( un->errorstring, GS( NWM_ERROR_SSLFAILED ) );
-				makehtmlerror( un );
-				un->state = UNS_FAILED;
-				un_netclose( un );
-				return FALSE;
-			}
-			else
-			{
-				struct Node *ssln;
-				ssln = (APTR)nalloc( sizeof( *ssln ) + strlen( un->purl.host ) + 1 );
-				if( ssln )
-				{
-					ssln->ln_Name = (char*)(ssln + 1 );
-					strcpy( ssln->ln_Name, un->purl.host );
-					ADDTAIL( &sslcertlist, ssln );
-				}
-			}
-		}
-	}
+	VSSL_X509_Free( peercert );
 	cipher = VSSL_GetCipher( un->sslh );
 	sslver = VSSL_GetVersion( un->sslh );
 	un->sslcipher = StrDupPooled( un->pool, cipher );
@@ -1296,6 +1280,49 @@ static int un_doprotocol_http_ssl_after_write( struct unode *un )
 	net_log( "ssl_setup: handshake ok host=%s sslh=%lx\n",
 		un->purl.host ? (char *)un->purl.host : "", (ULONG)(APTR)un->sslh );
 	return TRUE;
+}
+
+/*
+ * AmiTLS runs the handshake in the first write and aborts it when the
+ * server certificate does not verify. Ask the user (certificate requester
+ * in the main task); when accepted, reconnect this host through the
+ * no-verify context. TRUE when the failure was handled here.
+ */
+static int un_doprotocol_http_ssl_verify_failed( struct unode *un )
+{
+	char *errorp = NULL;
+	char info[ 400 ];
+	int rc;
+
+	if( !un->sslh || VSSL_GetVerifyResult( un->sslh, &errorp ) < 2 )
+		return( FALSE );
+	if( !un->purl.host || FINDNAME( &sslcertlist, un->purl.host ) )
+		return( FALSE );
+
+	net_log( "ssl_setup: verify failed host=%s (%s)\n", un->purl.host, errorp ? errorp : "" );
+
+	snprintf( info, sizeof( info ), " Host: %s\n\n The certificate details are not available when\n verification fails.\n", un->purl.host );
+	un->sslpeercert = StrDupPooled( un->pool, info );
+
+	rc = certreq_ask( NULL, errorp ? errorp : "", VSSLVAR, un );
+	if( !rc )
+	{
+		snprintf( un->errorstring, sizeof( un->errorstring ), "%s: %s",
+			GS( NWM_ERROR_SSLFAILED ), errorp ? errorp : "" );
+		makehtmlerror( un );
+		un->state = UNS_FAILED;
+		un_netclose( un );
+		return( TRUE );
+	}
+
+	sslcert_accept( un->purl.host, rc == 2 );
+
+	/* reconnect from scratch, ssl_setup now picks ssl_ctx_noverify */
+	un_netclose( un );
+	un->sslpeercert = NULL;
+	un->protocolstate = HTTP_SEND_REQUEST;
+	un->state = UNS_WAITINGFORNET;
+	return( TRUE );
 }
 #endif
 

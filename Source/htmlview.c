@@ -2878,7 +2878,9 @@ DECSMETHOD( HTMLView_DoPrint )
 	struct Screen *scr;
 	struct RastPort *rp;
 	LONG vis_w, vis_h, doc_h, y, saved_top, band, destcols, destrows, drows, err;
+	LONG top;
 	UWORD sx, sy, special;
+	APTR win;
 	int use_tp, abort;
 	APTR gauge;
 	int *abortflag;
@@ -2952,13 +2954,23 @@ DECSMETHOD( HTMLView_DoPrint )
 		destcols = pio->drp.io_DestCols;
 		destrows = pio->drp.io_DestRows;
 	}
+	/* destrows is the printer size of one vis_h high band */
 	if( destcols < 1 )
 		destcols = vis_w;
 	if( destrows < 1 )
-		destrows = doc_h;
+		destrows = vis_h;
 
 	if( gauge )
 		set( gauge, MUIA_Gauge_Max, doc_h );
+
+	/*
+	 * tickapp() below processes input; keep the browser window from being
+	 * closed (and this object disposed) while printing. The print window
+	 * with the abort button stays active.
+	 */
+	win = _win( obj );
+	if( win )
+		set( win, MUIA_Window_Sleep, TRUE );
 
 	for( y = 0; y < doc_h; y += vis_h )
 	{
@@ -2977,13 +2989,24 @@ DECSMETHOD( HTMLView_DoPrint )
 		rp = _rp( obj );
 		if( !rp )
 			break;
-		drows = destrows * band / doc_h;
+		/*
+		 * MUI clamps the top to doc_h - vis_h, so the last (partial) band
+		 * starts further down in the visible area than row 0.
+		 */
+		top = (LONG)getv( obj, MUIA_Virtgroup_Top );
+		if( top > y )
+			top = y;
+		if( y - top + band > vis_h )
+			band = vis_h - ( y - top );
+		if( band < 1 )
+			break;
+		drows = destrows * band / vis_h;
 		if( drows < 1 )
 			drows = 1;
 		special = (UWORD)( SPECIAL_FULLCOLS | SPECIAL_ASPECT | SPECIAL_NOFORMFEED );
 		if( y + band >= doc_h )
 			special = (UWORD)( SPECIAL_FULLCOLS | SPECIAL_ASPECT );
-		err = print_dump_band( pio, rp, scr, sx, sy, (UWORD)vis_w, (UWORD)band, destcols, drows, special, use_tp );
+		err = print_dump_band( pio, rp, scr, sx, (UWORD)( sy + ( y - top ) ), (UWORD)vis_w, (UWORD)band, destcols, drows, special, use_tp );
 		if( err )
 		{
 			MUI_Request( app, NULL, 0, GS( ERROR ), GS( CANCEL ), GS( PRINT_PRINTERR ), (ULONG)err );
@@ -2995,10 +3018,13 @@ DECSMETHOD( HTMLView_DoPrint )
 	}
 
 	set( obj, MUIA_Virtgroup_Top, saved_top );
+	if( win )
+		set( win, MUIA_Window_Sleep, FALSE );
 	CloseDevice( (struct IORequest *)&pio->drp );
 	DeleteIORequest( (struct IORequest *)pio );
 	DeleteMsgPort( port );
 	(void)abort;
+	/* msg->mode 2 (graphics without background) prints like mode 1 */
 	(void)msg->mode;
 #else
 	(void)msg;

@@ -62,9 +62,22 @@ Changes prior to 3.0 were already dropped in that file.
 - The cache index and saved authentications were written as garbage:
   the `FPrintfAsync` RawDoFmt callback did not take the character in d0 and
   the data in a3.
-- `snprintf` had RawDoFmt semantics (16 bit `%d`/`%u`, no `%f`), breaking
-  HTTPS through a proxy (`CONNECT host:0`) and the download size/speed
-  display. It is now a bounded C formatter.
+- `snprintf` had RawDoFmt semantics (16 bit `%d`/`%u`, no `%f`), garbling
+  the download size/speed display and any `%d` in generated pages. It is now
+  a bounded C formatter.
+- Untrusted HTTPS certificates only gave "TLS 1.2 handshake failed": the
+  certificate requester was unreachable because AmiTLS aborts the handshake
+  on a failed verification. It now shows the reason (expired, wrong host
+  name, untrusted issuer, ...); "Accept this time" reconnects without
+  verification for that host, "Accept and save" also remembers the host in
+  `Certificates/AcceptedHosts`. Without a CA bundle the plugin no longer
+  silently skips verification, the requester asks instead. The made-up
+  certificate fingerprint is gone (AmiTLS has no certificate data for it).
+- Printing: the last band re-printed rows already printed instead of the
+  end of the page, band heights were scaled by the document height instead
+  of the band height, and the browser window could be closed while it was
+  printing. "Graphical dump (without background)" still prints with the
+  background.
 - Freed strings were kept on out of memory where `strupd()` followed a
   `free()`; form option values set to empty went into the text field.
 - MimePrefs never imported V's prefs file: its file ID was `VY²` (a Latin-1
