@@ -1193,7 +1193,7 @@ static void un_doprotocol_http_ssl_setup( struct unode *un )
 			un->purl.host ? (char *)un->purl.host : "",
 			(long)un->sock, (ULONG)(APTR)ssl_ctx );
 		un->sslh = VSSL_ConnectHost( ssl_ctx, un->sock,
-			un->purl.host ? un->purl.host : (STRPTR)"localhost" );
+			un->purl.host ? (STRPTR)un->purl.host : (STRPTR)"localhost" );
 	}
 /* MiamiSSL deprecated - commented out
 #if USE_MIAMI

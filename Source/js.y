@@ -22,6 +22,7 @@ static void __yy_memcpy (char *,char *to,int);
 int yyparse (void);
 void yyerror(char *);
 
+#undef alloca
 #define alloca js_alloca
 extern void *js_alloca( int );
 
@@ -40,6 +41,8 @@ typedef void *FILE;
 #define EOF -1
 #endif
 #ifndef __MORPHOS__
+#undef stdin
+#undef stdout
 #define stdin 0
 #define stdout 0
 #endif /* __MORPHOS__ */

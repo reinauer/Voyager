@@ -64,7 +64,7 @@ DECNEW
 	{
 		if( tag->ti_Tag == MA_Smartlabel_Text )
 		{
-			data->contents = tag->ti_Data ? (STRPTR)tag->ti_Data : "";
+			data->contents = tag->ti_Data ? (STRPTR)tag->ti_Data : (STRPTR)"";
 		}
 		else if( tag->ti_Tag == MA_Smartlabel_MoreText )
 		{
@@ -85,7 +85,7 @@ DECSET
 	{
 		GETDATA;
 
-		data->contents = tag->ti_Data ? (STRPTR)tag->ti_Data : "";
+		data->contents = tag->ti_Data ? (STRPTR)tag->ti_Data : (STRPTR)"";
 
 #ifdef MBX
 		if( data->contents[ 0 ] )

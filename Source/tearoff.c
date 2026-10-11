@@ -56,7 +56,7 @@ void savetearoff( STRPTR filename )
 		strcpy( buffer, filename );
 		p = FilePart( buffer );
 		*p = '\0';
-		strncat( buffer, "Voyager.tearoff", sizeof( buffer ) );
+		strncat( buffer, "Voyager.tearoff", sizeof( buffer ) - strlen( buffer ) - 1 );
 
 		if( handle = AllocIFF() )
 		{
@@ -89,7 +89,7 @@ void loadtearoff( STRPTR filename )
 	strcpy( buffer, filename );
 	p = FilePart( buffer );
 	*p = '\0';
-	strncat( buffer, "Voyager.tearoff", sizeof( buffer ) );
+	strncat( buffer, "Voyager.tearoff", sizeof( buffer ) - strlen( buffer ) - 1 );
 
 	f = Open( buffer, MODE_OLDFILE );
 

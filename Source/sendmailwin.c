@@ -214,7 +214,7 @@ static void reallysendmail( int s, char *subject, char *to, char *contents )
 				}
 				if( *p != '.' && ( ( *p >= 32 && *p <= 60 ) || ( *p >= 62 && *p <= 126 ) ) )
 				{
-					send( s, ( UBYTE const * )p, 1, 0 );
+					send( s, p, 1, 0 );
 					chs++;
 				}
 				else
@@ -237,7 +237,7 @@ static void reallysendmail( int s, char *subject, char *to, char *contents )
 		{
 			if( *p == '.' )
 			{
-				send( s, ( UBYTE const * )'.', 1, 0 );
+				send( s, ".", 1, 0 );
 			}
 			sprintf( buffer, "%s\r\n", p );
 			send( s, buffer, strlen( buffer ), 0 );

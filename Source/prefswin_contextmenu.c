@@ -470,12 +470,12 @@ DECSMETHOD( Prefswin_ContextMenu_LoadTree )
 		{
 			ULONG depth = getprefslong( mode[ MODE_DEPTH ] + c + 1, 0 ); // nasty..
 
-			D( db_gui, bug( "adding context menu %s in listtree\n", ( getprefslong( mode[ MODE_ACTION ] + c, 0 ) == BFUNC_BAR ) ? "---" : getprefsstr( mode[ MODE_LABELS ] + c, "" ) ) );
+			D( db_gui, bug( "adding context menu %s in listtree\n", ( getprefslong( mode[ MODE_ACTION ] + c, 0 ) == BFUNC_BAR ) ? (STRPTR)"---" : getprefsstr( mode[ MODE_LABELS ] + c, "" ) ) );
 
 			vpcm->num = c;
 			vpcm->action = getprefslong( mode[ MODE_ACTION ] + c, 0 );
 			stccpy( vpcm->args, getprefsstr( mode[ MODE_ARGS ] + c, "" ), VREXX_MAXLENGTH );
-			tn = ( APTR )DoMethod( data->lt_menu[ msg->type ], MUIM_Listtree_Insert, ( getprefslong( mode[ MODE_ACTION ] + c, 0 ) == BFUNC_BAR ) ? "---" : getprefsstr( mode[ MODE_LABELS ] + c, "" ), vpcm, ISLISTEMPTY( &ll ) ? MUIV_Listtree_Insert_ListNode_Root : ( ( struct vp_iocontextmenu * )LASTNODE( &ll ) )->ln, MUIV_Listtree_Insert_PrevNode_Tail, ( getprefslong( mode[ MODE_DEPTH ] + c + 1, 0 ) > current_depth ) ? TNF_LIST : NULL );
+			tn = ( APTR )DoMethod( data->lt_menu[ msg->type ], MUIM_Listtree_Insert, ( getprefslong( mode[ MODE_ACTION ] + c, 0 ) == BFUNC_BAR ) ? (STRPTR)"---" : getprefsstr( mode[ MODE_LABELS ] + c, "" ), vpcm, ISLISTEMPTY( &ll ) ? MUIV_Listtree_Insert_ListNode_Root : ( ( struct vp_iocontextmenu * )LASTNODE( &ll ) )->ln, MUIV_Listtree_Insert_PrevNode_Tail, ( getprefslong( mode[ MODE_DEPTH ] + c + 1, 0 ) > current_depth ) ? TNF_LIST : 0 );
 					
 			/*
 			 * Adjust depth
