@@ -908,12 +908,22 @@ DECTMETHOD( NStream_Done )
 {
 	GETDATA;
 	ULONG x, y;
+	int wasfinished = data->finished;
 
 	/*
 	 * This is a bit stupid but MM_NStream_Done and MM_NStream_GotData
 	 * use a lot of common things so..
 	 */
 	DoMethod( obj, MM_NStream_GotData );
+
+	/*
+	 * GotData looks at the live transfer state, so the page can already
+	 * be finished (and HTMLWin_CheckDone done) while the nethandler's
+	 * "Receiving page" text and gauge update are still queued behind it.
+	 * Done is always queued after those, so redo the final status here.
+	 */
+	if( wasfinished )
+		DoMethod( data->htmlwin, MM_HTMLWin_CheckDone );
 
 	/*
 	 * Check if the user moved first

@@ -50,6 +50,9 @@ Changes prior to 3.0 were already dropped in that file.
   before it; the group backfill now only repaints the requested rectangle
   instead of widening it to the whole group. Form gadgets also redraw
   after the offscreen cache blit, like the select and textarea already did.
+- Status bar staying on "Receiving page (total N bytes)" after an HTTP page
+  finished loading: a late status text from the nethandler overwrote
+  "Ready.".
 - `Print_Start` no longer closes the print window without printing.
 - Cookie-cut image blits: PNG alpha mask `(APTR)-1` is never passed to
   `getclone` / `BltMaskBitMapRastPort` (OS4 68k jumped through
