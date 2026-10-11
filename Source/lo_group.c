@@ -1736,29 +1736,38 @@ DECMMETHOD( Backfill )
 		return( 0 );
 	}
 
-	/* TOFIX: this is temporary */
-	if( OCLASS( obj ) == data->ctx->dom_document )
+	/*
+	 * Limit the requested rectangle to the area of this group. MUI asks
+	 * for small parts (e.g. the background of a single form gadget) and
+	 * repainting more than that would draw over the children already
+	 * drawn next to it.
+	 */
 	{
-		msg->left = _mleft( data->ctx->dom_document );
-		msg->top = _mtop( data->ctx->dom_document );
-		msg->right = _mright( data->ctx->dom_document );
-		msg->bottom = _mbottom( data->ctx->dom_document );
-	}
-	else
-	{
-		/*
-		 * This is the sucky part.. only used for subgroups now.
-		 */
-		msg->left = _left( obj );
-		msg->top = _vtop( obj );
-		msg->right = msg->left + data->li.xs - 1;
-		msg->bottom = msg->top + data->li.ys - 1;
+		LONG gl, gt, gr, gb;
 
-		msg->left = max( 0, msg->left );
-		msg->top = max( 0, msg->top );
-		msg->right = min( 4096, msg->right );
-		msg->bottom = min( 4096, msg->bottom );
+		if( OCLASS( obj ) == data->ctx->dom_document )
+		{
+			gl = _mleft( data->ctx->dom_document );
+			gt = _mtop( data->ctx->dom_document );
+			gr = _mright( data->ctx->dom_document );
+			gb = _mbottom( data->ctx->dom_document );
+		}
+		else
+		{
+			gl = _left( obj );
+			gt = _vtop( obj );
+			gr = gl + data->li.xs - 1;
+			gb = gt + data->li.ys - 1;
+		}
+
+		msg->left = max( msg->left, gl );
+		msg->top = max( msg->top, gt );
+		msg->right = min( msg->right, gr );
+		msg->bottom = min( msg->bottom, gb );
 	}
+
+	if( msg->left > msg->right || msg->top > msg->bottom )
+		return( TRUE );
 
 #ifdef USE_REGION_BACKFILL
 	if( ( data->bgcolor != LO_NOPEN || data->bgbitmap ) && _window( obj ) && !data->has_no_childs_with_backfilling )
@@ -1948,13 +1957,23 @@ DECMMETHOD( Backfill )
 		ty = offs_y + tnr->yp;
 		tx = offs_x + tnr->xp;
 
-		if( ty + 10 < msg->top ) /* XXX: remove that once everything works */
+		/*
+		 * The rectangle can now be a small part of the group, so use the
+		 * real font extent instead of a fixed margin around the baseline.
+		 * Texts are sorted by baseline, stop once even a large font can't
+		 * reach into the rectangle anymore.
+		 */
+		if( ty - tnr->tn->font->tf_Baseline + tnr->tn->font->tf_YSize + 2 < msg->top )
 		{
 			continue;
 		}
-		else if( ty - 30 > msg->bottom )
+		else if( ty - 255 > msg->bottom )
 		{
 			break;
+		}
+		else if( ty - tnr->tn->font->tf_Baseline > msg->bottom )
+		{
+			continue;
 		}
 
 #ifdef MBX

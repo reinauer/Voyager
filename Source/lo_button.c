@@ -217,6 +217,12 @@ DECSMETHOD( Layout_DoLayout )
 	return( (ULONG)&data->li );
 }
 
+DECTMETHOD( Layout_RefreshAfterIncrementalDump )
+{
+	MUI_Redraw( obj, MADF_DRAWOBJECT );
+	return( 0 );
+}
+
 DECSMETHOD( Layout_FormElement_ReportValue )
 {
 	GETDATA;
@@ -344,6 +350,7 @@ DECMMETHOD( GoInactive )
 }
 
 BEGINMTABLE
+case MM_Layout_RefreshAfterIncrementalDump: { return(handleMM_Layout_RefreshAfterIncrementalDump(cl, obj, (APTR)msg)); }
 case OM_NEW: { return(handleOM_NEW(cl, obj, (APTR)msg)); }
 case OM_DISPOSE: { return(handleOM_DISPOSE(cl, obj, (APTR)msg)); }
 case OM_GET: { return(handleOM_GET(cl, obj, (APTR)msg)); }

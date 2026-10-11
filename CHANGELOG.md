@@ -44,6 +44,12 @@ Changes prior to 3.0 were already dropped in that file.
 
 ### Fixed
 
+- Tables, text fields, buttons, checkboxes and radio buttons sometimes not
+  drawn on pages (space reserved, contents missing). A gadget's background
+  request made the page group repaint its whole area over the gadgets drawn
+  before it; the group backfill now only repaints the requested rectangle
+  instead of widening it to the whole group. Form gadgets also redraw
+  after the offscreen cache blit, like the select and textarea already did.
 - `Print_Start` no longer closes the print window without printing.
 - Cookie-cut image blits: PNG alpha mask `(APTR)-1` is never passed to
   `getclone` / `BltMaskBitMapRastPort` (OS4 68k jumped through
