@@ -19,7 +19,7 @@
  * $Id: gif.c,v 1.21 2003/07/06 16:51:35 olli Exp $
  */
 
-#ifdef __SASC
+#if defined( __SASC ) || ( defined( __GNUC__ ) && !defined( __MORPHOS__ ) )
 #include "gst.h"
 #include <proto/exec.h>
 #include <proto/dos.h>
@@ -53,7 +53,7 @@
  * optimizer
  */
 #undef memcmp
-#endif /* __SASC */
+#endif /* __SASC || 68k GCC */
 
 #ifdef MBX
 #include "mbx.h"

@@ -14,7 +14,11 @@
 	xdef    _writechunky
 _writechunky:
 	movem.l a2-a5/d2-d3,-(sp)
+	ifd     GCC
+	lea     bufferblock,a2      ; buffer bytes (no small data with GCC)
+	else
 	lea     bufferblock(a4),a2  ; buffer bytes
+	endc
 
 beginblock:
 	; clear buffer block

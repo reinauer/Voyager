@@ -17,7 +17,7 @@
 #include "voyager.h"
 #include <stdarg.h>
 
-#ifdef __SASC
+#if defined( __SASC ) || ( defined( __GNUC__ ) && !defined( __MORPHOS__ ) )
 #include <proto/exec.h>
 
 struct snbuf
@@ -26,13 +26,17 @@ struct snbuf
 	char *end;
 };
 
+#ifdef __SASC
 static void ASM sn_putc( __reg( d0, UBYTE c ), __reg( a3, struct snbuf *s ) )
+#else
+static void sn_putc( UBYTE c __asm__( "d0" ), struct snbuf *s __asm__( "a3" ) )
+#endif
 {
 	if( s->p < s->end )
 		*s->p++ = (char)c;
 }
 
-int voy_vsnprintf( char *str, unsigned int size, const char *format, APTR args )
+int voy_vsnprintf( char *str, size_t size, const char *format, APTR args )
 {
 	struct snbuf s;
 
@@ -45,7 +49,7 @@ int voy_vsnprintf( char *str, unsigned int size, const char *format, APTR args )
 	return( (int)( s.p - str ) );
 }
 
-int STDARGS snprintf( char *str, unsigned int size, const char *format, ... )
+int STDARGS snprintf( char *str, size_t size, const char *format, ... )
 {
 	va_list args;
 	int n;
@@ -60,12 +64,12 @@ int STDARGS snprintf( char *str, unsigned int size, const char *format, ... )
 
 #include <proto/utility.h>
 
-int voy_vsnprintf( char *str, unsigned int size, const char *format, APTR args )
+int voy_vsnprintf( char *str, size_t size, const char *format, APTR args )
 {
 	return( VSNPrintf( str, size, (const STRPTR)format, args ) );
 }
 
-int snprintf( char *str, unsigned int size, const char *format, ... )
+int snprintf( char *str, size_t size, const char *format, ... )
 {
 	va_list args;
 	int result;
@@ -76,4 +80,4 @@ int snprintf( char *str, unsigned int size, const char *format, ... )
 	return( result );
 }
 
-#endif /* __SASC */
+#endif /* __SASC || 68k GCC */

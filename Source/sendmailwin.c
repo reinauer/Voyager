@@ -54,6 +54,9 @@
 NETBASE;
 #endif
 #else
+#ifdef __GNUC__ /* proto/socket.h already declares a global SocketBase */
+#define SocketBase MailSocketBase
+#endif
 static struct Library *SocketBase;
 #endif
 

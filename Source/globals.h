@@ -160,9 +160,9 @@ void mergeurl( char *from, char *add, char *to );
 /*
  * Global Symbol Table
  */
-#ifdef __SASC
+#if defined( __SASC ) || ( defined( __GNUC__ ) && !defined( __MORPHOS__ ) )
 #include "gst.h"
-#endif /* __SASC */
+#endif /* __SASC || 68k GCC */
 
 
 /*

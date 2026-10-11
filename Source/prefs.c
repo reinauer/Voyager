@@ -97,7 +97,7 @@ void cleanup_prefs( void )
 	}
 }
 
-#if defined( MBX ) || defined( __MORPHOS__ )
+#if defined( MBX ) || defined( __GNUC__ ) /* GCC: no sup.s, it needs SAS/C's A4 */
 
 static __inline struct prefsnode * fpn( ULONG id )
 {
@@ -133,9 +133,9 @@ APTR getprefs( ULONG id )
 	return( n ? n->data : NULL);
 }
 
-#endif /* MBX || __MORPHOS__ */
+#endif /* MBX || __GNUC__ */
 
-#ifndef MBX
+#if !defined( MBX ) && !defined( __GNUC__ )
 extern ASM struct prefsnode *fpn( __reg( d1, ULONG id ) );
 extern ASM struct prefsnode *fpn_clone( __reg( d1, ULONG id ) );
 #endif

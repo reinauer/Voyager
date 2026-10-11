@@ -11,6 +11,8 @@
 
 #include "types64.h"
 
+#ifdef __SASC /* GCC uses long long for QWORD, see types64.h */
+
 #ifndef ASM
 #define ASM __asm
 #endif
@@ -35,5 +37,7 @@ ASM void q_mul020(__reg(d0, LONG multiplicand), __reg(d1, LONG multiplier), __re
 ASM void q_mulu(__reg(d0, ULONG multiplicand), __reg(d1, ULONG multiplier), __reg(a0, QWORD *res));
 ASM double qtod(__reg(a0, QWORD *q));
 ASM double uqtoud(__reg(a0, UQWORD *q));
+
+#endif /* __SASC */
 
 #endif /* MATH64_H */

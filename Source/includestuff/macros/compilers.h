@@ -70,9 +70,10 @@
 #define ASM
 #endif
 
-#ifndef __far
+/* no small data model with GCC, so __far is pointless (and the builtin
+ * attribute is rejected on locals) */
+#undef __far
 #define __far
-#endif
 
 #ifndef SAVEDS
 #define SAVEDS

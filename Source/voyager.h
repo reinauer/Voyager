@@ -42,7 +42,7 @@ extern int iscybermap;
 void displaybeep( void );
 void STDARGS reporterror( char *msg, ... );
 #ifdef __SASC
-int	snprintf(char *, unsigned int, const char *, ...);
+int	snprintf(char *, size_t, const char *, ...);
 #endif /* !snprintf */
 
 

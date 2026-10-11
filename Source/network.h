@@ -43,9 +43,9 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 
-#if defined( __MORPHOS__ ) || defined( __SASC )
+#if defined( __MORPHOS__ ) || defined( __SASC ) || defined( __GNUC__ )
 #include <proto/socket.h>
-#endif /* __MORPHOS__ */
+#endif /* __MORPHOS__ || __SASC || __GNUC__ */
 
 #endif /* !MBX */
 

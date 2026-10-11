@@ -64,6 +64,14 @@
 		#define REG(a,b) __reg(#a) b
 		#define ASM
 		#define SAVEDS
+	#elif defined(__GNUC__)
+		#ifndef ASM
+		#define ASM
+		#endif
+		#ifndef SAVEDS
+		#define SAVEDS
+		#endif
+		#define REG(a,b) b __asm__(#a)
 	#elif defined(__SASC)
 		#define ASM __asm
 		#define SAVEDS __saveds

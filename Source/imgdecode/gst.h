@@ -23,6 +23,8 @@
 #include <exec/memory.h>
 #include <exec/interrupts.h>
 #include <proto/muimaster.h>
+#include <clib/alib_protos.h>
+#include "sasc_compat.h" /* min()/max() etc. for GCC */
 #include <workbench/workbench.h>
 #include <workbench/startup.h>
 #include <libraries/gadtools.h>
@@ -41,12 +43,16 @@
 #define USE_BUILTIN_MATH
 #include <time.h>
 #include <string.h>
+#ifdef __SASC
 #include <constructor.h>
+#endif
 #include <ctype.h>
 #include <stdlib.h>
 #include <setjmp.h>
 
+#ifdef __SASC /* USE_VAT is 0 on AmigaOS, GCC has no VAT inlines */
 #include <proto/vat.h>
+#endif
 
 /* sprintf declaration removed - defined in imgdecode.c to avoid conflict with stdio.h */
 
@@ -56,6 +62,8 @@
 #define D_S(type,name) char a_##name[sizeof(type)+3]; \
 					   type *name = (type *)((LONG)(a_##name+3) & ~3);
 
+#ifdef __SASC
 #define __callback __asm __saveds
 #define _reg(x) register __##x
+#endif
 

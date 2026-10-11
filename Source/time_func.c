@@ -43,7 +43,11 @@
 
 #define UnixTimeOffset (252482400-(6*3600))
 
+#ifdef __GNUC__
+struct Device *TimerBase; /* NDK proto/timer.h declares it as a Device */
+#else
 struct Library *TimerBase; /* CBM sucked */
+#endif
 static struct MsgPort *timerport;
 static struct timerequest *treq;
 
@@ -106,7 +110,7 @@ int init_timer( void )
 		return( FALSE );
 	}
 	D( db_init, bug( "timer.device opened\n" ) );
-	TimerBase = ( struct Library * )treq->tr_node.io_Device;
+	TimerBase = ( void * )treq->tr_node.io_Device;
 
 	/*
 	 * Set the start time for timed()
@@ -306,10 +310,12 @@ long UtPack( const char *x)
 
 	ut = utpack( x );
 
+#ifdef __SASC /* sasc_compat.c's utpack() for GCC gets leap years right */
 	if( ut >= 951782400 )
 	{
 		ut += 3600 * 24;
 	}
+#endif
 
 	return( ut );
 }

@@ -227,7 +227,13 @@ struct GroupData
 LONG MUIG_ScrollRaster(struct RastPort *rp,WORD dx,WORD dy,WORD left,WORD top,WORD right,WORD bottom);
 #if !defined( MBX ) && !defined( __MORPHOS__ )
 extern struct Library *MUIGfxBase;
+#ifdef __GNUC__
+#define MUIG_ScrollRaster(rp, dx, dy, left, top, right, bottom) \
+	LP7(0xf0, LONG, MUIG_ScrollRaster, struct RastPort *, rp, a0, WORD, dx, d0, WORD, dy, d1, WORD, left, d2, WORD, top, d3, WORD, right, d4, WORD, bottom, d5, \
+	, MUIGfxBase)
+#else
 #pragma libcall MUIGfxBase MUIG_ScrollRaster f0 543210807
+#endif /* __GNUC__ */
 #endif
 
 #ifdef __MORPHOS__

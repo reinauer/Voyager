@@ -21,9 +21,9 @@
 
 #include "config.h"
 
-#ifdef __SASC
+#if defined( __SASC ) || ( defined( __GNUC__ ) && !defined( __MORPHOS__ ) )
 #include "gst.h"
-#endif /* __SASC */
+#endif /* __SASC || 68k GCC */
 
 #include "globals.h"
 #include "async.h"
@@ -63,9 +63,11 @@ void __stdargs sprintf( char *to, const char *fmt, ... );
 #undef memcmp
 #endif /* __SASC */
 
-#ifdef AMIGAOS
+#if defined( AMIGAOS ) && defined( __SASC )
 extern ASM mystoreds( void );
 extern ASM mygetds( void );
+#endif
+#ifdef AMIGAOS
 #if !defined( __MORPHOS__ )
 #include <proto/exec.h>
 #endif /* !__MORPHOS__ */
@@ -142,9 +144,9 @@ struct imgcallback mcbt;
 #define BROKENBM ((struct BitMap*)-1)
 
 // make jpeglib happy
-#ifdef AMIGAOS
+#if defined( AMIGAOS ) && defined( __SASC )
 typedef APTR FILE;
-#endif /* AMIGAOS */
+#endif /* AMIGAOS && __SASC */
 #undef GLOBAL
 #include "jpeglib.h"
 #include "jversion.h"
@@ -198,7 +200,9 @@ static int image_shinepen, image_shadowpen;
 
 #ifndef MBX
 /* Library-owned copy so vimgdecode.vlib links without needing debug.o */
+#ifndef __GNUC__ /* GCC: linked into V, use debug.c's (debug.h declares it extern) */
 static int db_level = 0;
+#endif
 
 /* Output handle handed to the decoder process so it can be traced */
 static BPTR imgdeclog;
@@ -3777,7 +3781,7 @@ static void imghandlerfunc( void )
 	APTR executivemsg;
 #endif /* USE_EXECUTIVE */
 
-#ifdef AMIGAOS
+#if defined( AMIGAOS ) && defined( __SASC )
 	/*
 	 * CreateTask/CreateNewProc do not load SAS/C's near-data pointer (A4).
 	 * mystoreds() in libinit saved A4/A6; without this, Wait() loads SysBase
@@ -4568,9 +4572,9 @@ int ASM SAVEDS imgdec_maskused(
 		return( FALSE );
 }
 
-#ifdef AMIGAOS
+#if defined( AMIGAOS ) && defined( __SASC )
 /*
- * sprintf() replacement
+ * sprintf() replacement (GCC uses the C library one)
  */
 UWORD fmtfunc[] = { 0x16c0, 0x4e75 };
 void __stdargs sprintf( char *to, const char *fmt, ... )
@@ -4879,9 +4883,9 @@ int imgdec_libinit_internal( struct imgcallback *cbtptr )
 
 		VoyLog(( "[IMGDEC] Creating image decoder process...\n" ));
 		VoyFlush();
-#ifdef AMIGAOS
+#if defined( AMIGAOS ) && defined( __SASC )
 		mystoreds();
-#endif /* AMIGAOS */
+#endif /* AMIGAOS && __SASC */
 		/*
 		 * Must be a Process, not a plain Exec task: the decoder reaches
 		 * dos.library (cache files, errorreq, Delay) and those need pr_*

@@ -107,6 +107,12 @@ const char *stack_cookie = "$STACK: 65536";
 long __oslibversion = 37;
 #endif
 
+#if defined( __GNUC__ ) && !defined( __MORPHOS__ )
+// libnix swapstack.o honours this (makefile.gcc links it with -u ___stkinit)
+unsigned long __stack = 65536;
+const char *stack_cookie = "$STACK: 65536";
+#endif
+
 //TOFIX: check if that works
 #ifdef __MORPHOS__
 long __stack = 65536 * 2;
@@ -124,6 +130,9 @@ void displaybeep( void )
 void dprintf(char *, ... );
 #define kprintf dprintf
 #endif /* __MORPHOS__ */
+#if defined( AMIGAOS ) && defined( __GNUC__ ) && !defined( kprintf )
+#include <clib/debug_protos.h>
+#endif
 
 void STDARGS reporterror( char *msg, ... )
 {
@@ -650,10 +659,10 @@ extern struct ExecBase *SysBase; /* needs global one (startup code) */
 /*
  * This is used to avoid argc/argv parsing
  */
-#ifdef AMIGAOS
+#if defined( AMIGAOS ) && defined( __SASC )
 void STDARGS __main( char *dummy )
 #endif
-#ifdef __MORPHOS__
+#if defined( __MORPHOS__ ) || ( defined( AMIGAOS ) && defined( __GNUC__ ) )
 int main( int argc, char *argv[  ] )
 #endif
 #ifdef MBX

@@ -11,8 +11,8 @@
 #ifdef VSNPrintf
 #undef VSNPrintf
 #endif
-int snprintf( char *str, unsigned int size, const char *format, ... );
-int voy_vsnprintf( char *str, unsigned int size, const char *format, APTR args );
+int snprintf( char *str, size_t size, const char *format, ... );
+int voy_vsnprintf( char *str, size_t size, const char *format, APTR args );
 #define SNPrintf snprintf
 #define VSNPrintf voy_vsnprintf
 #endif /* AMIGAOS */

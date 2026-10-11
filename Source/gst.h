@@ -69,12 +69,19 @@
 #include <clib/alib_protos.h>
 
 /* _DCC -- Hack to get MUIC_xxx defines as extern char[] */
-#ifdef __GNUC__
+#if defined( __GNUC__ ) && defined( __MORPHOS__ )
 #define _DCC
 extern struct Library *MUIMasterBase;
 #include "//morphos/mui/muimaster_protos.h"
 #include "//morphos/mui/muimaster_pragmas.h"
 #include "//morphos/mui/mui.h"
+#undef _DCC
+#elif defined( __GNUC__ )
+/* 68k GCC - includestuff MUI headers, NDK inlines */
+#define _DCC
+extern struct Library *MUIMasterBase;
+#include <libraries/mui.h>
+#include <proto/muimaster.h>
 #undef _DCC
 #elif defined(__SASC)
 /* SAS/C - use includestuff MUI headers */
@@ -140,5 +147,7 @@ extern struct Library *MUIMasterBase;
 #endif
 
 #include "snprint.h"
+
+#include "sasc_compat.h"
 
 #endif /* VOYAGER_GST_H */
