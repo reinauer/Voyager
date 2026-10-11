@@ -16,9 +16,16 @@
 
 #include <exec/memory.h>
 #include <exec/interrupts.h>
+#ifdef __SASC
 #include <proto/muimaster.h>
 //#include <libraries/mui.h>
 #include "mui.h"
+#else
+/* 68k GCC: includestuff MUI headers, varargs stubs from libmui.a */
+extern struct Library *MUIMasterBase;
+#include <libraries/mui.h>
+#include <proto/muimaster.h>
+#endif
 #include <workbench/workbench.h>
 #include <workbench/startup.h>
 #include <libraries/gadtools.h>
@@ -37,7 +44,14 @@
 #define USE_BUILTIN_MATH
 #include <time.h>
 #include <string.h>
+#ifdef __SASC
 #include <constructor.h>
+#else
+#include "gcc_compat.h"
+#include "sasc_compat.h" /* stccpy() */
+#include <clib/alib_protos.h> /* DoMethod() */
+#endif
+#include <macros/compilers.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <setjmp.h>
@@ -80,9 +94,14 @@
 #define ASTORE(t,x) case t: data->x = tag->ti_Data;break;
 #define ASTOREP(t,x) case t: data->x = (APTR)tag->ti_Data;break;
 
-#define DEFHOOK(n) static struct Hook n##_hook={0,0,(HOOKFUNC)n##_func}
+#define DEFHOOK(n) static struct Hook n##_hook={{0,0},(HOOKFUNC)n##_func,0,0}
 
+#ifdef __SASC
 #define __callback __asm __saveds
+#else
+#define __callback
+#endif
+/* hook arguments: __reg( a1, struct foo *x ) from macros/compilers.h */
 #define _reg(x) register __##x
 
 // standard globals

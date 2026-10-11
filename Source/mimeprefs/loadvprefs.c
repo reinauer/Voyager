@@ -1,15 +1,15 @@
 #include "mimeprefs.h"
 
-#define PREFSFILEID MAKE_ID('V','Y','²',0)
+#define PREFSFILEID MAKE_ID('V','Y','2',0) /* same as prefs.c, the source had a Latin-1 'Â²' here so V prefs never imported */
 
 static APTR prefspool;
-struct MinList prefslist;
+struct List prefslist;
 
 struct prefsnode {
 	struct MinNode n;
 	ULONG id;
 	ULONG size;
-	char data[ 0 ];
+	char data[ 0 ];
 };
 
 static ULONG readlong( BPTR f )
@@ -22,6 +22,27 @@ static ULONG readlong( BPTR f )
 //
 // Encoding
 //
+
+#ifndef __SASC
+/* The prefs file is XORed with SAS/C's rand() sequence, see prefs.c */
+static unsigned int sas_seed;
+
+static void sas_srand( unsigned int s )
+{
+	sas_seed = s - 1;
+}
+
+static int sas_rand( void )
+{
+	int ret = sas_seed * 0xe5d + 0xe60;
+	ret &= 0x7fffffff;
+	sas_seed = ret - 1;
+
+	return( ret );
+}
+#define srand sas_srand
+#define rand sas_rand
+#endif
 
 static void __inline codebytes( UBYTE *data, int size )
 {
@@ -55,7 +76,7 @@ static __inline struct prefsnode * fpn( ULONG id )
 {
 	struct prefsnode *n, *nn;
 
-	for( n = FIRSTNODE( &prefslist ); nn = NEXTNODE( n ); n = nn )
+	for( n = FIRSTNODE( &prefslist ); ( nn = NEXTNODE( n ) ); n = nn )
 		if( n->id == id )
 			return( n );
 
@@ -108,7 +129,7 @@ int importvprefs( char *filename )
 		if( size > 1024 )
 			break;
 
-		if( n = fpn( id ) )
+		if( ( n = fpn( id ) ) )
 			rmpn( n );
 
 		n = mkpn( id, size, NULL );
@@ -150,24 +171,24 @@ int importvprefs( char *filename )
 
 		for( d = 0; mimetype_opts[ d ]; d++ )
 		{
-			if( !strncmp( n->data, mimetype_opts[ d ], strlen( mimetype_opts[ d ] ) ) )
+			if( !strncmp( n->data, mimetype_opts[ d ], strlen( mimetype_opts[ d ] ) ) )
 			{
 				mi.basetype = d;
 				break;
 			}
 		}
 
-		if( !strchr( n->data, '/' ) )
+		if( !strchr( n->data, '/' ) )
 			break;
 
-		strcpy( mi.type, strchr( n->data, '/' ) + 1 );
+		strcpy( mi.type, strchr( n->data, '/' ) + 1 );
 
 		n = fpn( DSI_MIME + DSI_MIME_EXT_OFFSET + c );
 		if( !n )
 			break;
 		strcpy( mi.ext, n->data );
 		for( p = mi.ext; *p; p++ )
-			if( *p == ',' )
+			if( *p == ',' )
 				*p = ' ';
 		
 		n = fpn( DSI_MIME + DSI_MIME_APP_OFFSET + c );

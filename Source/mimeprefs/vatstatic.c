@@ -56,7 +56,7 @@ struct Screen *VAT_GetAppScreen( APTR app )
 	{
 		get( app, MUIA_Application_WindowList, &l );
 		ostate = l->lh_Head;
-		while( o = NextObject( &ostate ) )
+		while( ( o = NextObject( &ostate ) ) )
 		{
 			scr = NULL;
 			get( o, MUIA_Window_Screen, &scr );

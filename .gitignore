@@ -6,3 +6,4 @@ Source/V.amigaos.gcc
 Source/V.gcc.debug
 build/
 Internet/Voyager/V.gcc
+**/objects/gcc/

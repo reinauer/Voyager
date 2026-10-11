@@ -32,7 +32,11 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
+#ifdef __SASC
 #include <sys/errno.h>
+#else
+#include <errno.h>
+#endif
 #include <proto/bsdsocket.h>
 #include <string.h>
 #include <stdio.h>
@@ -52,8 +56,18 @@
 
 #include "rev.h"
 
-/* SAS/C: __reg(a0, T x) -> register __a0 T x (same as Voyager macros/compilers.h). */
+/* SAS/C: __reg(a0, T x) -> register __a0 T x (same as Voyager macros/compilers.h).
+ * 68k GCC: T x __asm__("a0"), library entry from ../../libstart_gcc.c */
+#ifdef __SASC
+#define ASM __asm
+#define SAVEDS __saveds
 #define __reg(x,y) register __ ## x y
+#else
+#include "libstart_gcc.h"
+#define ASM
+#define SAVEDS
+#define __reg(x,y) y __asm__(#x)
+#endif
 
 /* Voyager stores these flags; AmiTLS ignores SSLv2/v3/TLS1 bits. */
 #define SSL_OP_ALL					0x000FFFFFUL
@@ -513,14 +527,20 @@ vssl_do_connect(struct vssl_ctx *ctx, int sock, STRPTR hostname)
 	return (APTR)conn;
 }
 
-char * __asm VSSL_Id(void)
+char * ASM VSSL_Id(void)
 {
 	return ("Voyager SSL  " VERTAG " AmiTLS/BearSSL");
 }
 
+#ifdef __SASC
 long __saveds __asm __UserLibInit(register __a6 struct Library *libbase)
+#else
+long __UserLibInit(struct Library *libbase)
+#endif
 {
+#ifdef __SASC
 	SysBase = *((struct ExecBase **)4);
+#endif /* GCC: set by libstart_gcc.c */
 
 	if (!(SysBase->AttnFlags & AFF_68020)) {
 		return (-1);
@@ -553,7 +573,7 @@ long __saveds __asm __UserLibInit(register __a6 struct Library *libbase)
 	return (0);
 }
 
-void __saveds __asm __UserLibCleanup(void)
+void SAVEDS ASM __UserLibCleanup(void)
 {
 	if (task_attached && TlsBase != NULL) {
 		TlsTaskDetach();
@@ -573,7 +593,7 @@ void __saveds __asm __UserLibCleanup(void)
 	}
 }
 
-APTR __asm __saveds VSSL_Create_CTX(void)
+APTR ASM SAVEDS VSSL_Create_CTX(void)
 {
 	struct vssl_ctx *ctx;
 	struct TagItem tags[4];
@@ -631,7 +651,7 @@ APTR __asm __saveds VSSL_Create_CTX(void)
 	return (APTR)ctx;
 }
 
-void __asm __saveds VSSL_CTX_Set_Options(__reg(a0, APTR pctx), __reg(d0, ULONG options))
+void ASM SAVEDS VSSL_CTX_Set_Options(__reg(a0, APTR pctx), __reg(d0, ULONG options))
 {
 	struct vssl_ctx *ctx;
 
@@ -641,7 +661,7 @@ void __asm __saveds VSSL_CTX_Set_Options(__reg(a0, APTR pctx), __reg(d0, ULONG o
 	}
 }
 
-void __asm __saveds VSSL_Free_CTX(__reg(a0, APTR pctx))
+void ASM SAVEDS VSSL_Free_CTX(__reg(a0, APTR pctx))
 {
 	struct vssl_ctx *ctx;
 
@@ -657,7 +677,7 @@ void __asm __saveds VSSL_Free_CTX(__reg(a0, APTR pctx))
 	FreeVec(ctx);
 }
 
-APTR __asm __saveds VSSL_Connect(__reg(a0, APTR pctx), __reg(d0, int sock))
+APTR ASM SAVEDS VSSL_Connect(__reg(a0, APTR pctx), __reg(d0, int sock))
 {
 	struct vssl_ctx *ctx;
 
@@ -665,7 +685,7 @@ APTR __asm __saveds VSSL_Connect(__reg(a0, APTR pctx), __reg(d0, int sock))
 	return vssl_do_connect(ctx, sock, (STRPTR)"localhost");
 }
 
-APTR __asm __saveds VSSL_ConnectHost(__reg(a0, APTR pctx), __reg(d0, int sock), __reg(a1, STRPTR hostname))
+APTR ASM SAVEDS VSSL_ConnectHost(__reg(a0, APTR pctx), __reg(d0, int sock), __reg(a1, STRPTR hostname))
 {
 	struct vssl_ctx *ctx;
 
@@ -673,7 +693,7 @@ APTR __asm __saveds VSSL_ConnectHost(__reg(a0, APTR pctx), __reg(d0, int sock), 
 	return vssl_do_connect(ctx, sock, hostname);
 }
 
-ULONG __asm __saveds VSSL_Pending(__reg(a0, APTR pssl))
+ULONG ASM SAVEDS VSSL_Pending(__reg(a0, APTR pssl))
 {
 	struct vssl_conn *conn;
 
@@ -687,7 +707,7 @@ ULONG __asm __saveds VSSL_Pending(__reg(a0, APTR pssl))
 	return TlsPending(conn->tls);
 }
 
-void __asm __saveds VSSL_Close(__reg(a0, APTR pssl))
+void ASM SAVEDS VSSL_Close(__reg(a0, APTR pssl))
 {
 	struct vssl_conn *conn;
 
@@ -713,7 +733,7 @@ void __asm __saveds VSSL_Close(__reg(a0, APTR pssl))
 	FreeVec(conn);
 }
 
-char * __asm __saveds VSSL_GetCipher(__reg(a0, APTR pssl))
+char * ASM SAVEDS VSSL_GetCipher(__reg(a0, APTR pssl))
 {
 	struct vssl_conn *conn;
 
@@ -761,7 +781,7 @@ vssl_note_write_rc(struct vssl_conn *conn, LONG rc)
 	}
 }
 
-int __asm __saveds VSSL_Write(__reg(a0, APTR pssl), __reg(a1, APTR data), __reg(d0, ULONG len))
+int ASM SAVEDS VSSL_Write(__reg(a0, APTR pssl), __reg(a1, APTR data), __reg(d0, ULONG len))
 {
 	struct vssl_conn *conn;
 	LONG rc;
@@ -809,7 +829,7 @@ int __asm __saveds VSSL_Write(__reg(a0, APTR pssl), __reg(a1, APTR data), __reg(
 	}
 }
 
-int __asm __saveds VSSL_Read(__reg(a0, APTR pssl), __reg(a1, APTR data), __reg(d0, ULONG len))
+int ASM SAVEDS VSSL_Read(__reg(a0, APTR pssl), __reg(a1, APTR data), __reg(d0, ULONG len))
 {
 	struct vssl_conn *conn;
 	LONG rc;
@@ -853,14 +873,14 @@ int __asm __saveds VSSL_Read(__reg(a0, APTR pssl), __reg(a1, APTR data), __reg(d
 	return (-1);
 }
 
-void __asm __saveds VSSL_SetTCPMode(__reg(d0, int mode), __reg(a0, APTR libbase))
+void ASM SAVEDS VSSL_SetTCPMode(__reg(d0, int mode), __reg(a0, APTR libbase))
 {
 	(void)mode;
 	SocketBase = (struct Library *)libbase;
 	vssl_ensure_task();
 }
 
-int __asm __saveds VSSL_GetVerifyResult(__reg(a0, APTR pssl), __reg(a1, char **errorp))
+int ASM SAVEDS VSSL_GetVerifyResult(__reg(a0, APTR pssl), __reg(a1, char **errorp))
 {
 	struct vssl_conn *conn;
 	static char fallback[] = "Certificate verify failed";
@@ -882,7 +902,7 @@ int __asm __saveds VSSL_GetVerifyResult(__reg(a0, APTR pssl), __reg(a1, char **e
 	return (conn->verify_rc);
 }
 
-X509 * __asm __saveds VSSL_GetPeerCertificate(__reg(a0, APTR pssl))
+X509 * ASM SAVEDS VSSL_GetPeerCertificate(__reg(a0, APTR pssl))
 {
 	struct vssl_conn *conn;
 	struct vssl_cert *cert;
@@ -912,7 +932,7 @@ X509 * __asm __saveds VSSL_GetPeerCertificate(__reg(a0, APTR pssl))
 	return ((X509 *)cert);
 }
 
-void __asm __saveds VSSL_X509_Free(__reg(a0, APTR obj))
+void ASM SAVEDS VSSL_X509_Free(__reg(a0, APTR obj))
 {
 	struct vssl_cert *cert;
 
@@ -927,7 +947,7 @@ void __asm __saveds VSSL_X509_Free(__reg(a0, APTR obj))
 	FreeVec(cert);
 }
 
-STRPTR __asm __saveds VSSL_X509_NameOneline(__reg(a0, X509_NAME *name))
+STRPTR ASM SAVEDS VSSL_X509_NameOneline(__reg(a0, X509_NAME *name))
 {
 	static char namebuff[256];
 
@@ -936,12 +956,12 @@ STRPTR __asm __saveds VSSL_X509_NameOneline(__reg(a0, X509_NAME *name))
 	return ((STRPTR)namebuff);
 }
 
-void __asm __saveds VSSL_X509_FreeNameOneline(__reg(a0, STRPTR name))
+void ASM SAVEDS VSSL_X509_FreeNameOneline(__reg(a0, STRPTR name))
 {
 	(void)name;
 }
 
-X509_NAME * __asm __saveds VSSL_X509_get_subject_name(__reg(a0, X509 *pcert))
+X509_NAME * ASM SAVEDS VSSL_X509_get_subject_name(__reg(a0, X509 *pcert))
 {
 	struct vssl_cert *cert;
 
@@ -961,7 +981,7 @@ X509_NAME * __asm __saveds VSSL_X509_get_subject_name(__reg(a0, X509 *pcert))
 	return NULL;
 }
 
-X509_NAME * __asm __saveds VSSL_X509_get_issuer_name(__reg(a0, X509 *pcert))
+X509_NAME * ASM SAVEDS VSSL_X509_get_issuer_name(__reg(a0, X509 *pcert))
 {
 	struct vssl_cert *cert;
 
@@ -972,7 +992,7 @@ X509_NAME * __asm __saveds VSSL_X509_get_issuer_name(__reg(a0, X509 *pcert))
 	return ((X509_NAME *)cert->tpc.tpc_Issuer);
 }
 
-ASN1_UTCTIME * __asm __saveds VSSL_X509_get_notBefore(__reg(a0, X509 *pcert))
+ASN1_UTCTIME * ASM SAVEDS VSSL_X509_get_notBefore(__reg(a0, X509 *pcert))
 {
 	struct vssl_cert *cert;
 
@@ -983,7 +1003,7 @@ ASN1_UTCTIME * __asm __saveds VSSL_X509_get_notBefore(__reg(a0, X509 *pcert))
 	return ((ASN1_UTCTIME *)cert->tpc.tpc_NotBefore);
 }
 
-ASN1_UTCTIME * __asm __saveds VSSL_X509_get_notAfter(__reg(a0, X509 *pcert))
+ASN1_UTCTIME * ASM SAVEDS VSSL_X509_get_notAfter(__reg(a0, X509 *pcert))
 {
 	struct vssl_cert *cert;
 
@@ -994,7 +1014,7 @@ ASN1_UTCTIME * __asm __saveds VSSL_X509_get_notAfter(__reg(a0, X509 *pcert))
 	return ((ASN1_UTCTIME *)cert->tpc.tpc_NotAfter);
 }
 
-void __asm __saveds VSSL_AddCertDir(__reg(a0, APTR pctx), __reg(a1, STRPTR dir))
+void ASM SAVEDS VSSL_AddCertDir(__reg(a0, APTR pctx), __reg(a1, STRPTR dir))
 {
 	char path[256];
 	struct vssl_ctx *ctx;
@@ -1020,7 +1040,7 @@ void __asm __saveds VSSL_AddCertDir(__reg(a0, APTR pctx), __reg(a1, STRPTR dir))
 	}
 }
 
-int __asm __saveds VSSL_WriteCertPEM(__reg(a0, X509 *pcert), __reg(a1, STRPTR outfile))
+int ASM SAVEDS VSSL_WriteCertPEM(__reg(a0, X509 *pcert), __reg(a1, STRPTR outfile))
 {
 	struct vssl_cert *cert;
 	BPTR fh;
@@ -1047,7 +1067,7 @@ int __asm __saveds VSSL_WriteCertPEM(__reg(a0, X509 *pcert), __reg(a1, STRPTR ou
 	return (1);
 }
 
-X509 * __asm __saveds VSSL_ReadCertPEM(__reg(a0, STRPTR filename))
+X509 * ASM SAVEDS VSSL_ReadCertPEM(__reg(a0, STRPTR filename))
 {
 	struct vssl_cert *cert;
 
@@ -1064,12 +1084,12 @@ X509 * __asm __saveds VSSL_ReadCertPEM(__reg(a0, STRPTR filename))
 	return ((X509 *)cert);
 }
 
-X509 * __asm __saveds VSSL_ReadCertASN1(__reg(a0, STRPTR filename))
+X509 * ASM SAVEDS VSSL_ReadCertASN1(__reg(a0, STRPTR filename))
 {
 	return VSSL_ReadCertPEM(filename);
 }
 
-void __asm __saveds VSSL_ASN1_UTCTIME_sprint(__reg(a0, char *to), __reg(a1, ASN1_UTCTIME *tm))
+void ASM SAVEDS VSSL_ASN1_UTCTIME_sprint(__reg(a0, char *to), __reg(a1, ASN1_UTCTIME *tm))
 {
 	STRPTR s;
 
@@ -1084,7 +1104,7 @@ void __asm __saveds VSSL_ASN1_UTCTIME_sprint(__reg(a0, char *to), __reg(a1, ASN1
 	strcpy(to, (char *)s);
 }
 
-ULONG __asm __saveds VSSL_X509_NameHash(__reg(a0, X509 *pcert))
+ULONG ASM SAVEDS VSSL_X509_NameHash(__reg(a0, X509 *pcert))
 {
 	struct vssl_cert *cert;
 	STRPTR s;
@@ -1100,14 +1120,14 @@ ULONG __asm __saveds VSSL_X509_NameHash(__reg(a0, X509 *pcert))
 	return (vssl_hash_str(s));
 }
 
-int __asm __saveds VSSL_X509_HaveSubjectCert(__reg(a0, APTR pctx), __reg(a1, X509 *cert))
+int ASM SAVEDS VSSL_X509_HaveSubjectCert(__reg(a0, APTR pctx), __reg(a1, X509 *cert))
 {
 	(void)pctx;
 	(void)cert;
 	return (0);
 }
 
-int __asm __saveds VSSL_X509_fingerprint(__reg(a0, X509 *pcert), __reg(a1, UBYTE *md5))
+int ASM SAVEDS VSSL_X509_fingerprint(__reg(a0, X509 *pcert), __reg(a1, UBYTE *md5))
 {
 	struct vssl_cert *cert;
 	ULONG h;
@@ -1124,7 +1144,7 @@ int __asm __saveds VSSL_X509_fingerprint(__reg(a0, X509 *pcert), __reg(a1, UBYTE
 	return (16);
 }
 
-void __asm __saveds VSSL_X509_serialnumber(__reg(a0, X509 *pcert), __reg(a1, UBYTE *to))
+void ASM SAVEDS VSSL_X509_serialnumber(__reg(a0, X509 *pcert), __reg(a1, UBYTE *to))
 {
 	struct vssl_cert *cert;
 
@@ -1139,13 +1159,13 @@ void __asm __saveds VSSL_X509_serialnumber(__reg(a0, X509 *pcert), __reg(a1, UBY
 	strcpy((char *)to, "00");
 }
 
-void __asm __saveds VSSL_SetRandSeed(__reg(a0, APTR buff), __reg(d0, int len))
+void ASM SAVEDS VSSL_SetRandSeed(__reg(a0, APTR buff), __reg(d0, int len))
 {
 	(void)buff;
 	(void)len;
 }
 
-void __asm __saveds VSSL_GetStats(__reg(a0, APTR pctx), __reg(a1, struct VSSL_CacheInfo *ci))
+void ASM SAVEDS VSSL_GetStats(__reg(a0, APTR pctx), __reg(a1, struct VSSL_CacheInfo *ci))
 {
 	struct vssl_ctx *ctx;
 
@@ -1168,7 +1188,7 @@ void __asm __saveds VSSL_GetStats(__reg(a0, APTR pctx), __reg(a1, struct VSSL_Ca
 	ci->sess_timeouts = ctx->sess_timeouts;
 }
 
-STRPTR __asm __saveds VSSL_GetVersion(__reg(a0, APTR pssl))
+STRPTR ASM SAVEDS VSSL_GetVersion(__reg(a0, APTR pssl))
 {
 	struct vssl_conn *conn;
 
@@ -1179,7 +1199,58 @@ STRPTR __asm __saveds VSSL_GetVersion(__reg(a0, APTR pssl))
 	return ((STRPTR)conn->version);
 }
 
-void __asm __saveds VSSL_SetDefaultOptions(__reg(d0, int options))
+void ASM SAVEDS VSSL_SetDefaultOptions(__reg(d0, int options))
 {
 	ssl_options = (ULONG)options;
 }
+
+#if defined( __GNUC__ ) && !defined( __MORPHOS__ )
+/*
+ * 68k GCC library description, see ../../libstart_gcc.h. The function
+ * order follows ../fd/vssl.fd.
+ */
+const char LibName[] = "voyager_ssl.vlib";
+const char LibIdString[] = "Voyager SSL (AmiTLS) " VERTAG "\r\n";
+const UWORD LibVersion = VERSION;
+const UWORD LibRevision = REVISION;
+
+const APTR LibFuncTable[] =
+{
+	LIBSTART_SYSFUNCS,
+	(APTR)VSSL_Id,
+	(APTR)VSSL_Create_CTX,
+	(APTR)VSSL_Free_CTX,
+	(APTR)VSSL_Connect,
+	(APTR)VSSL_Close,
+	(APTR)VSSL_GetCipher,
+	(APTR)VSSL_Write,
+	(APTR)VSSL_Read,
+	(APTR)VSSL_SetTCPMode,
+	(APTR)VSSL_GetPeerCertificate,
+	(APTR)VSSL_AddCertDir,
+	(APTR)VSSL_X509_Free,
+	(APTR)VSSL_X509_NameOneline,
+	(APTR)VSSL_X509_FreeNameOneline,
+	(APTR)VSSL_X509_get_subject_name,
+	(APTR)VSSL_X509_get_issuer_name,
+	(APTR)VSSL_X509_get_notBefore,
+	(APTR)VSSL_X509_get_notAfter,
+	(APTR)VSSL_GetVerifyResult,
+	(APTR)VSSL_WriteCertPEM,
+	(APTR)VSSL_ReadCertPEM,
+	(APTR)VSSL_ReadCertASN1,
+	(APTR)VSSL_ASN1_UTCTIME_sprint,
+	(APTR)VSSL_X509_NameHash,
+	(APTR)VSSL_X509_HaveSubjectCert,
+	(APTR)VSSL_X509_fingerprint,
+	(APTR)VSSL_X509_serialnumber,
+	(APTR)VSSL_SetRandSeed,
+	(APTR)VSSL_GetStats,
+	(APTR)VSSL_CTX_Set_Options,
+	(APTR)VSSL_GetVersion,
+	(APTR)VSSL_SetDefaultOptions,
+	(APTR)VSSL_ConnectHost,
+	(APTR)VSSL_Pending,
+	(APTR)-1
+};
+#endif /* __GNUC__ && !__MORPHOS__ */

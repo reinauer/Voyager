@@ -32,9 +32,13 @@ enum {
 };
 
 
-// SAS/C Startup vars
+// SAS/C Startup vars (libnix: __stack with -Wl,-u,___stkinit, see gcc_startup.c)
+#ifdef __SASC
 long __stack = 16000;
 long __oslibversion = 37;
+#else
+unsigned long __stack = 16000;
+#endif
 
 //	sprintf() replacement (signature matches SAS/C stdlib.h)
 UWORD fmtfunc[] = { 0x16c0, 0x4e75 };
@@ -128,6 +132,7 @@ static void mynnset( APTR obj, ULONG attr, ULONG v)
 	SetAttrs( obj, MUIA_NoNotify, TRUE, attr, v, TAG_DONE );
 }
 
+#if 0 /* unused */
 static void __stdargs multidis( int state, ... )
 {
 	APTR *op = (APTR*)(&state + 1);
@@ -138,6 +143,7 @@ static void __stdargs multidis( int state, ... )
 		op++;
 	}
 }
+#endif
 
 //
 //  Startup parsing...
@@ -332,7 +338,7 @@ static APTR but( char *str )
 
 STRPTR mimetype_opts[] = { "application/", "text/", "image/", "audio/", "video/", "message/", "multipart/", NULL };
 
-static int __callback mime_disp_func( _reg( a1 ) struct mimeinfo *mi, _reg( a2 ) STRPTR *array )
+static int __callback mime_disp_func( __reg( a1, struct mimeinfo *mi ), __reg( a2, STRPTR *array ) )
 {
 	if( !mi )
 	{
@@ -372,7 +378,7 @@ static int __callback mime_disp_func( _reg( a1 ) struct mimeinfo *mi, _reg( a2 )
 	return( 0 );
 }
 
-static APTR __callback mime_const_func( _reg( a1 ) struct mimeinfo *mi, _reg( a2 ) APTR pool )
+static APTR __callback mime_const_func( __reg( a1, struct mimeinfo *mi ), __reg( a2, APTR pool ) )
 {
 	struct mimeinfo *nmi = AllocPooled( pool, sizeof( *nmi ) );
 	int newone = FALSE;
@@ -407,7 +413,7 @@ static APTR __callback mime_const_func( _reg( a1 ) struct mimeinfo *mi, _reg( a2
 	return( nmi );
 }
 
-static int __callback mime_compare_func( _reg( a1 ) struct mimeinfo *m1, _reg( a2 ) struct mimeinfo *m2 )
+static int __callback mime_compare_func( __reg( a1, struct mimeinfo *m1 ), __reg( a2, struct mimeinfo *m2 ) )
 {
 	if( m1->basetype == m2->basetype )
 		return( stricmp( m1->type, m2->type ) );
@@ -415,12 +421,12 @@ static int __callback mime_compare_func( _reg( a1 ) struct mimeinfo *m1, _reg( a
 		return( ( m1->basetype > m2->basetype ) ? 1 : -1 );
 }
 
-static void __callback mime_dest_func( _reg( a1 ) struct mimeinfo *mi, _reg( a2 ) APTR pool )
+static void __callback mime_dest_func( __reg( a1, struct mimeinfo *mi ), __reg( a2, APTR pool ) )
 {
 	FreePooled( pool, mi, sizeof( *mi ) );
 }
 
-static void __callback mime_act_func( _reg( a1 ) LONG *args )
+static void __callback mime_act_func( __reg( a1, LONG *args ) )
 {
 	DoMethod( grp_edit1, MUIM_Group_InitChange );
 	DoMethod( grp_edit2, MUIM_Group_InitChange );
@@ -536,7 +542,7 @@ static void initnewmenus( void )
 	}
 }
 
-static void __callback appmsg_func( register __a1 struct AppMessage **amp )
+static void __callback appmsg_func( __reg( a1, struct AppMessage **amp ) )
 {
 	struct AppMessage *am = *amp;
 	char filename[ 256 ];
@@ -982,6 +988,8 @@ static int loadprefs( char *from )
 	Close( f );
 
 	set( lv_mime, MUIA_List_Quiet, FALSE );
+
+	return( 0 );
 }
 
 static int saveprefs( char *to, int noicons )
@@ -997,7 +1005,7 @@ static int saveprefs( char *to, int noicons )
 		return( FALSE );
 	}
 
-	FPrintf( f, ";\n; MIME Preferences\n\;\n; generated with MimePrefs " VERTAG " \n;\n" );
+	FPrintf( f, ";\n; MIME Preferences\n;\n; generated with MimePrefs " VERTAG " \n;\n" );
 
 	for( c = 0; ; c++ )
 	{
@@ -1034,6 +1042,8 @@ static int saveprefs( char *to, int noicons )
 			FreeDiskObject( dob );
 		}
 	}
+
+	return( 0 );
 }
 
 static void loadprefsfh( void )
@@ -1476,7 +1486,11 @@ static void doloop( void )
 	}
 }
 
+#ifdef __SASC
 int main( int argc, char **argv )
+#else
+int mimeprefs_main( int argc, char **argv ) /* called by gcc_startup.c */
+#endif
 {
 	makedefaults();
 	loadprefs( startup_cfgfile );

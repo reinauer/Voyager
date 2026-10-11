@@ -1,0 +1,49 @@
+# GNU makefile: MimePrefs with m68k-amigaos-gcc (bebbo toolchain)
+#
+# make -f makefile.gcc          builds objects/gcc/MimePrefs (and .debug)
+# make -f makefile.gcc clean
+#
+# Differences from the SAS/C smakefile: gcc_startup.c runs the
+# CONSTRUCTOR_P/DESTRUCTOR_P functions (gcc_compat.h), the catalog strings
+# come from mimeprefs_cat.h (no catcomp object), vat/sup_generic.c is not
+# needed (vatstatic.c has the pool functions MimePrefs uses).
+
+CROSS    ?= m68k-amigaos-
+CC       = $(CROSS)gcc
+STRIP    = $(CROSS)strip
+CPU      ?= 68020
+
+OBJDIR   = objects/gcc
+TARGET   = $(OBJDIR)/MimePrefs
+
+INCLUDES = -I. -I.. -I../includestuff -I../vat
+CFLAGS   = -noixemul -m$(CPU) -Os -fomit-frame-pointer -funsigned-char \
+	-fno-strict-aliasing -fcommon -Wall -Wno-pointer-sign \
+	-Wno-int-conversion -Wno-incompatible-pointer-types -Wno-missing-braces \
+	-Werror=implicit-function-declaration -DAMIGAOS -DNO_INLINE_STDARG $(INCLUDES)
+LDFLAGS  = -noixemul -m$(CPU) -Wl,-u,___stkinit
+LIBS     = -lmui -lamiga
+
+OBJS = $(OBJDIR)/mimeprefs.o $(OBJDIR)/loadvprefs.o $(OBJDIR)/vatstatic.o \
+	$(OBJDIR)/gcc_startup.o $(OBJDIR)/sasc_compat.o
+
+.PHONY: all clean
+
+all: $(TARGET)
+
+$(TARGET): $(OBJS)
+	$(CC) $(LDFLAGS) -o $(TARGET).debug $(OBJS) $(LIBS)
+	$(STRIP) -o $@ $(TARGET).debug
+
+$(OBJDIR)/%.o: %.c
+	@mkdir -p $(OBJDIR)
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
+$(OBJDIR)/sasc_compat.o: ../sasc_compat.c ../sasc_compat.h
+	@mkdir -p $(OBJDIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+clean:
+	rm -rf $(OBJDIR)
+
+-include $(OBJS:.o=.d)

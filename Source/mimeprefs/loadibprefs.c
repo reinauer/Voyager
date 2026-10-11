@@ -26,7 +26,7 @@ int importibprefs( char *filename )
 
 	for( c = 0; c < len; c += 2 )
 	{
-		if( !memcmp( &cp[ c ], &misc, 4 ) )
+		if( !memcmp( &cp[ c ], &misc, 4 ) )
 			break;
 	}
 
@@ -39,11 +39,11 @@ int importibprefs( char *filename )
 		{
 			lp = (ULONG*)cp;
 			Printf( "ID %08lx len %ld: ",
-				lp[ 0 ], lp[ 1 ]
+				lp[ 0 ], lp[ 1 ]
 			);
 			cp += 8;
-			WriteChars( cp, lp[ 1 ] );
-			cp += lp[ 1 ] + ( lp[ 1 ] % 2 );
+			WriteChars( cp, lp[ 1 ] );
+			cp += lp[ 1 ] + ( lp[ 1 ] % 2 );
 			PutStr( "\n" );
 		}	
 	}

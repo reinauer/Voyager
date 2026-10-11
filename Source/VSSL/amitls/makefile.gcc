@@ -1,0 +1,49 @@
+# GNU makefile: voyager_ssl.vlib (AmiTLS backend) with m68k-amigaos-gcc
+#
+# make -f makefile.gcc          builds objects/gcc/voyager_ssl.vlib (and .debug)
+# make -f makefile.gcc clean
+#
+# The AmiTLS SDK headers are in include/ (MIT/BSD-2-Clause, see
+# include/LICENSE.amitls). The library entry comes from ../../libstart_gcc.c.
+
+CROSS    ?= m68k-amigaos-
+CC       = $(CROSS)gcc
+STRIP    = $(CROSS)strip
+CPU      ?= 68020
+
+OBJDIR   = objects/gcc
+TARGET   = $(OBJDIR)/voyager_ssl.vlib
+
+# romtag version from rev.h
+LIBVERSION := $(shell awk '/^\#define VERSION[ \t]+[0-9]+[ \t]*$$/ { print $$3 }' rev.h)
+
+INCLUDES = -I. -Iinclude -I../.. -I../../includestuff
+CFLAGS   = -noixemul -m$(CPU) -Os -fomit-frame-pointer -funsigned-char \
+	-fno-strict-aliasing -fcommon -Wall -Wno-pointer-sign \
+	-Werror=implicit-function-declaration -DAMIGAOS=1 -DNO_INLINE_STDARG \
+	$(INCLUDES)
+LDFLAGS  = -noixemul -m$(CPU) -nostartfiles
+LIBS     = -lamiga
+
+OBJS = $(OBJDIR)/libstart_gcc.o $(OBJDIR)/vssl.o $(OBJDIR)/libbases.o
+
+.PHONY: all clean
+
+all: $(TARGET)
+
+$(TARGET): $(OBJS)
+	$(CC) $(LDFLAGS) -o $(TARGET).debug $(OBJS) $(LIBS)
+	$(STRIP) -o $@ $(TARGET).debug
+
+$(OBJDIR)/libstart_gcc.o: ../../libstart_gcc.c ../../libstart_gcc.h rev.h
+	@mkdir -p $(OBJDIR)
+	$(CC) $(CFLAGS) -fno-toplevel-reorder -DLIB_VERSION=$(LIBVERSION) -c $< -o $@
+
+$(OBJDIR)/%.o: %.c
+	@mkdir -p $(OBJDIR)
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
+clean:
+	rm -rf $(OBJDIR)
+
+-include $(OBJS:.o=.d)

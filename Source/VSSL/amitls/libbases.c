@@ -12,6 +12,7 @@ int errno;
 int h_errno;
 
 /* sc.lib _exit / abort hooks — shared libraries must not terminate the process. */
+#ifdef __SASC
 void __saveds __XCEXIT(void)
 {
 }
@@ -23,3 +24,4 @@ void __regargs __chkabort(void)
 void __regargs _CXBRK(void)
 {
 }
+#endif /* __SASC */

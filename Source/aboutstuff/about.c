@@ -5,7 +5,30 @@
 #include <proto/exec.h>
 #include <exec/libraries.h>
 
+#ifdef __SASC
 #include "/includestuff/macros/compilers.h" /* XXX: hackish.. */
+#else
+#include <macros/compilers.h>
+#endif
+
+#if defined( __GNUC__ ) && !defined( __MORPHOS__ )
+/* 68k GCC: libstart_gcc.c provides the library entry, sprintf is the
+ * RawDoFmt one from libamiga.a */
+#include <stdio.h>
+#include "libstart_gcc.h"
+#include "rev.h"
+#define FAR
+
+long __UserLibInit( struct Library *libbase )
+{
+	libbase->lib_Node.ln_Pri = -128;
+	return( 0 );
+}
+
+void __UserLibCleanup( void )
+{
+}
+#endif
 
 #ifdef __MORPHOS__
 struct ExecBase *SysBase; /* lazy */
@@ -321,7 +344,7 @@ STRPTR ASM SAVEDS VABOUT_GetAboutPtr(
 		revid,
 		owner,
 		imgdec,
-		ssl ? ssl->lib_IdString : "(not installed)"
+		ssl ? (char *)ssl->lib_IdString : "(not installed)"
 	);
 
 	CloseLibrary( ssl );
@@ -452,3 +475,27 @@ STRPTR ASM SAVEDS VABOUT_GetAboutIbeta( void )
  );
 
 }
+
+#if defined( __GNUC__ ) && !defined( __MORPHOS__ )
+/*
+ * 68k GCC library description, see libstart_gcc.h. The function order
+ * follows fd/v_about_lib.fd.
+ */
+const char LibName[] = "voyager_about.vlib";
+const char LibIdString[] = "voyager_about.vlib " LVERTAG "\r\n";
+const UWORD LibVersion = VERSION;
+const UWORD LibRevision = REVISION;
+
+const APTR LibFuncTable[] =
+{
+	LIBSTART_SYSFUNCS,
+	(APTR)VABOUT_GetAboutPtr,
+	(APTR)VABOUT_GetVLogo,
+	(APTR)VABOUT_GetSSLLogo,
+	(APTR)VABOUT_GetPNGLogo,
+	(APTR)VABOUT_GetAboutIbeta,
+	(APTR)VABOUT_GetV3Logo,
+	(APTR)VABOUT_GetFlashLogo,
+	(APTR)-1
+};
+#endif /* __GNUC__ && !__MORPHOS__ */

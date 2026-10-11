@@ -14,6 +14,21 @@
 
 #include "rev.h"
 
+/* SAS/C: __reg(a0, T x) -> register __a0 T x, 68k GCC: T x __asm__("a0").
+ * The GCC library entry comes from ../libstart_gcc.c, the sc.lib string
+ * functions from ../sasc_compat.c */
+#ifdef __SASC
+#define ASM __asm
+#define SAVEDS __saveds
+#define __reg(x,y) register __ ## x y
+#else
+#include "libstart_gcc.h"
+#include "sasc_compat.h"
+#define ASM
+#define SAVEDS
+#define __reg(x,y) y __asm__(#x)
+#endif
+
 /** "us" created by ShapeMe 1.6 ((7.12.96)) from "us.gif" **/ 
 
 UBYTE usData[134]={0x47,0x49,0x46,0x38,0x39,0x61,0x12,0x00,0x0C,0x00,0xB3,0x00,0x00,0x00,0x00,0x00,
@@ -69,37 +84,45 @@ UBYTE deData[108]={0x47,0x49,0x46,0x38,0x39,0x61,0x12,0x00,0x0C,0x00,0xF2,0x07,0
 
 
 // Move lib down the liblist (we're nice, aren't we?)
+#ifdef __SASC
 long __asm __saveds __UserLibInit( register __a6 struct Library *libbase )
+#else
+long __UserLibInit( struct Library *libbase )
+#endif
 {
 		libbase->lib_Node.ln_Pri = -128;
 		return( 0 );
 }
 
-struct TagItem tags[] = {
+struct TagItem tags[] = {
 
-		VPLUG_Query_Version, VERSION,
-		VPLUG_Query_Revision, REVISION,
-		VPLUG_Query_Infostring, (ULONG)"Voyager Search Central plugin",
-		VPLUG_Query_Copyright, (ULONG)"(C) 1997-2003 Oliver Wagner <owagner@vapor.com>, All Rights Reserved",
+		{ VPLUG_Query_Version, VERSION },
+		{ VPLUG_Query_Revision, REVISION },
+		{ VPLUG_Query_Infostring, (ULONG)"Voyager Search Central plugin" },
+		{ VPLUG_Query_Copyright, (ULONG)"(C) 1997-2003 Oliver Wagner <owagner@vapor.com>, All Rights Reserved" },
 
-		VPLUG_Query_RegisterURLMethod, (ULONG)"SEARCH:",
+		{ VPLUG_Query_RegisterURLMethod, (ULONG)"SEARCH:" },
 
-		VPLUG_Query_HasURLMethodGetSize, TRUE,
+		{ VPLUG_Query_HasURLMethodGetSize, TRUE },
 
-		TAG_DONE
+		{ TAG_DONE, 0 }
 };
 
-struct TagItem * __asm __saveds VPLUG_Query( void )
+struct TagItem * ASM SAVEDS VPLUG_Query( void )
 {
 		return tags;
 }
 
-//      sprintf() replacement
+//      sprintf() replacement (GCC uses the RawDoFmt one from libamiga.a)
+#ifdef __SASC
 void __stdargs sprintf( char *to, char *fmt, ... )
 {
-		static UWORD fmtfunc[] = { 0x16c0, 0x4e75 };
+		static UWORD fmtfunc[] = { 0x16c0, 0x4e75 };
 		RawDoFmt( fmt, &fmt + 1, (APTR)fmtfunc, to );
 }
+#else
+#include <stdio.h>
+#endif
 
 /*
 "<td bgcolor=#e0e0e0><font size=-1><input type=submit name=s_m value='CDNOW'>&nbsp;by <select name=s_ac>"\
@@ -233,14 +256,14 @@ static void deescape( char *p )
 		{
 				if( *p == '+' )
 						*p = ' ';
-				else if( *p == '%' && p[ 1 ] && p[ 2 ] )
+				else if( *p == '%' && p[ 1 ] && p[ 2 ] )
 				{
 						char hex[ 4 ];
 						long v;
 
-						hex[ 0 ] = p[ 1 ];
-						hex[ 1 ] = p[ 2 ];
-						hex[ 2 ] = 0;
+						hex[ 0 ] = p[ 1 ];
+						hex[ 1 ] = p[ 2 ];
+						hex[ 2 ] = 0;
 
 						stch_l( hex, &v );
 						*p = v;
@@ -250,10 +273,10 @@ static void deescape( char *p )
 		}
 }
 
-APTR __asm __saveds VPLUG_ProcessURLMethod( register __a0 STRPTR url )
+APTR ASM SAVEDS VPLUG_ProcessURLMethod( __reg( a0, STRPTR url ) )
 {
 		char *res, *p;
-		char temp[ 4096 ];
+		char temp[ 4096 ];
 
 		res = AllocVec( 4096 - 4, 0 );
 		strcpy( res, "<TITLE>Search Error</TITLE><BODY><H2>Internal error" );
@@ -305,11 +328,11 @@ APTR __asm __saveds VPLUG_ProcessURLMethod( register __a0 STRPTR url )
 
 						// Split query string
 						stccpy( temp, p, sizeof( temp ) );
-						temp[ 0 ] = '&';
+						temp[ 0 ] = '&';
 
-						respurl[ 0 ] = 0;
+						respurl[ 0 ] = 0;
 
-						for( p = strtok( temp, "&" ); p; p = strtok( NULL, "&" ) )
+						for( p = strtok( temp, "&" ); p; p = strtok( NULL, "&" ) )
 						{
 								char *p2;
 								p2 = strchr( p, '=' );
@@ -383,7 +406,7 @@ APTR __asm __saveds VPLUG_ProcessURLMethod( register __a0 STRPTR url )
 								}
 						}
 
-						if( respurl[ 0 ] )
+						if( respurl[ 0 ] )
 						{
 								deescape( keywords );
 								sprintf( res, RESPONSE, keywords, respurl );
@@ -394,12 +417,12 @@ APTR __asm __saveds VPLUG_ProcessURLMethod( register __a0 STRPTR url )
 		return( res );
 }
 
-STRPTR __asm __saveds VPLUG_GetURLData( register __a0 APTR urlhandle )
+STRPTR ASM SAVEDS VPLUG_GetURLData( __reg( a0, APTR urlhandle ) )
 {
 		return( urlhandle );
 }
 
-int __asm __saveds VPLUG_GetURLDataSize( register __a0 APTR urlhandle )
+int ASM SAVEDS VPLUG_GetURLDataSize( __reg( a0, APTR urlhandle ) )
 {
 		if( urlhandle == (APTR)usData )
 				return( sizeof( usData ) );
@@ -413,12 +436,12 @@ int __asm __saveds VPLUG_GetURLDataSize( register __a0 APTR urlhandle )
 				return( -1 );
 }
 
-STRPTR __asm __saveds VPLUG_GetURLMIMEType( register __a0 APTR urlhandle )
+STRPTR ASM SAVEDS VPLUG_GetURLMIMEType( __reg( a0, APTR urlhandle ) )
 {
 		return( "text/html" );
 }
 
-void __asm __saveds VPLUG_FreeURLData( register __a0 APTR urlhandle )
+void ASM SAVEDS VPLUG_FreeURLData( __reg( a0, APTR urlhandle ) )
 {
 		if( urlhandle != (APTR)usData &&
 				urlhandle != (APTR)deData &&
@@ -428,24 +451,58 @@ void __asm __saveds VPLUG_FreeURLData( register __a0 APTR urlhandle )
 		FreeVec( urlhandle );
 }
 
-void __asm __saveds VPLUG_Setup( void )
+void ASM SAVEDS VPLUG_Setup( void )
 {
 }
-void __asm __saveds VPLUG_FinalSetup( void )
+void ASM SAVEDS VPLUG_FinalSetup( void )
 {
 }
-void __asm __saveds VPLUG_Cleanup( void )
+void ASM SAVEDS VPLUG_Cleanup( void )
 {
 }
-void __asm __saveds VPLUG_Hook_Prefs( void )
+void ASM SAVEDS VPLUG_Hook_Prefs( void )
 {
 }
-void __asm __saveds VPLUG_GetClass( void )
+void ASM SAVEDS VPLUG_GetClass( void )
 {
 }
-void __asm __saveds VPLUG_GetInfo( void )
+void ASM SAVEDS VPLUG_GetInfo( void )
 {
 }
-void __asm __saveds VPLUG_ProcessURLString( void )
+void ASM SAVEDS VPLUG_ProcessURLString( void )
 {
 }
+
+#if defined( __GNUC__ ) && !defined( __MORPHOS__ )
+void __UserLibCleanup( void )
+{
+}
+
+/*
+ * 68k GCC library description, see ../libstart_gcc.h. The function order
+ * follows ../pluginapi/fd/v_plugin_lib.fd.
+ */
+const char LibName[] = "Search.VPlug";
+const char LibIdString[] = "Voyager Search Central plugin " VERTAG "\r\n";
+const UWORD LibVersion = VERSION;
+const UWORD LibRevision = REVISION;
+
+const APTR LibFuncTable[] =
+{
+	LIBSTART_SYSFUNCS,
+	(APTR)VPLUG_Query,
+	(APTR)VPLUG_ProcessURLMethod,
+	(APTR)VPLUG_GetURLData,
+	(APTR)VPLUG_GetURLMIMEType,
+	(APTR)VPLUG_FreeURLData,
+	(APTR)VPLUG_GetClass,
+	(APTR)VPLUG_Setup,
+	(APTR)VPLUG_Cleanup,
+	(APTR)VPLUG_FinalSetup,
+	(APTR)VPLUG_Hook_Prefs,
+	(APTR)VPLUG_GetInfo,
+	(APTR)VPLUG_GetURLDataSize,
+	(APTR)VPLUG_ProcessURLString,
+	(APTR)-1
+};
+#endif /* __GNUC__ && !__MORPHOS__ */
